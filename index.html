@@ -1,0 +1,2297 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>LedgerPro — Accounting Software</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "secondary":"#2c694e","surface-container-low":"#f1f4fa","on-error":"#ffffff",
+        "surface-container-highest":"#dfe3e8","surface":"#f7f9ff","on-primary-container":"#81bac8",
+        "background":"#f7f9ff","primary-container":"#004b57","primary":"#00333c","outline":"#70787b",
+        "tertiary":"#630004","on-surface-variant":"#40484a","surface-container-lowest":"#ffffff",
+        "inverse-surface":"#2d3135","surface-container":"#ebeef4","surface-dim":"#d7dae0",
+        "outline-variant":"#bfc8ca","error":"#ba1a1a","on-surface":"#181c20",
+        "surface-container-high":"#e5e8ee","secondary-container":"#aeeecb",
+        "on-secondary-container":"#316e52","tertiary-fixed":"#ffdad5",
+        "on-primary":"#ffffff","on-secondary":"#ffffff","on-tertiary":"#ffffff"
+      },
+      fontFamily: { "headline":["Manrope"], "body":["Inter"], "label":["Inter"] },
+      borderRadius: {"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},
+    },
+  },
+}
+</script>
+<style>
+.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+body{font-family:'Inter',sans-serif;background:#f7f9ff;color:#181c20;overflow-x:hidden}
+.tabular-nums{font-variant-numeric:tabular-nums}
+.lithic-gradient{background:linear-gradient(135deg,#00333c 0%,#004b57 100%)}
+.glass-overlay{background:rgba(255,255,255,0.8);backdrop-filter:blur(16px);border:1px solid rgba(191,200,202,0.15)}
+.page{display:none}.page.active{display:block}
+.sidebar-link{display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;color:#64748b;transition:all 0.2s;cursor:pointer;border-right:4px solid transparent;font-size:0.875rem;font-weight:600}
+.sidebar-link:hover{color:#00333c;background:rgba(226,232,240,0.5)}
+.sidebar-link.active{color:#00333c;font-weight:700;border-right-color:#00333c;background:rgba(226,232,240,0.5)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);z-index:100;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal-content{background:white;border-radius:1rem;max-width:560px;width:95%;max-height:90vh;overflow-y:auto;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25)}
+.toast{position:fixed;bottom:2rem;right:2rem;z-index:200;padding:1rem 1.5rem;border-radius:0.75rem;color:white;font-weight:600;font-size:0.875rem;transform:translateY(100px);opacity:0;transition:all 0.3s}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{background:#2c694e}.toast.error{background:#ba1a1a}.toast.info{background:#00333c}
+.stat-card{background:white;border-radius:0.75rem;padding:1.5rem;position:relative;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.stat-card .icon-bg{position:absolute;top:-0.5rem;right:-0.5rem;opacity:0.06;font-size:5rem}
+input[type="date"]::-webkit-calendar-picker-indicator{cursor:pointer}
+.entry-row{transition:all 0.15s}.entry-row:hover{background:#f1f4fa}
+@media(max-width:1024px){.desktop-sidebar{transform:translateX(-100%);position:fixed;z-index:50}.desktop-sidebar.open{transform:translateX(0)}main.main-content{margin-left:0!important}header.top-bar{left:0!important}}
+.badge{display:inline-block;padding:0.125rem 0.5rem;border-radius:9999px;font-size:0.625rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em}
+.badge-green{background:#dcfce7;color:#166534}.badge-red{background:#fef2f2;color:#991b1b}
+.badge-blue{background:#dbeafe;color:#1e40af}.badge-yellow{background:#fef9c3;color:#854d0e}
+.badge-gray{background:#f1f5f9;color:#475569}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4rem 2rem;text-align:center;color:#70787b}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+.dropdown{position:relative;display:inline-block}.dropdown-menu{display:none;position:absolute;right:0;top:100%;min-width:180px;background:white;border-radius:0.75rem;box-shadow:0 10px 40px rgba(0,0,0,0.12);z-index:30;overflow:hidden}.dropdown.open .dropdown-menu{display:block}
+</style>
+</head>
+<body class="bg-surface font-body">
+
+<!-- Toast Notification -->
+<div id="toast" class="toast"></div>
+
+<!-- Mobile Menu Toggle -->
+<button id="mobileMenuBtn" class="fixed top-4 left-4 z-[60] lg:hidden bg-white rounded-lg p-2 shadow-md" onclick="toggleSidebar()">
+  <span class="material-symbols-outlined">menu</span>
+</button>
+
+<!-- Sidebar -->
+<aside id="sidebar" class="desktop-sidebar fixed left-0 top-0 h-full z-40 bg-slate-50 w-64 border-r border-slate-100 font-headline tracking-tight text-sm font-semibold transition-transform duration-300">
+<div class="flex flex-col h-full">
+  <div class="p-6 pb-4">
+    <div class="text-xl font-bold tracking-tighter text-primary mb-0.5">LedgerPro</div>
+    <div class="text-[10px] uppercase tracking-[0.2em] text-slate-400">Device Accounting</div>
+  </div>
+  <nav class="flex-1 px-3 space-y-0.5 overflow-y-auto" id="sideNav">
+    <div class="sidebar-link active" data-page="dashboard" onclick="navigate('dashboard')">
+      <span class="material-symbols-outlined text-xl">dashboard</span><span>Dashboard</span>
+    </div>
+    <div class="sidebar-link" data-page="parties" onclick="navigate('parties')">
+      <span class="material-symbols-outlined text-xl">group</span><span>Parties (Khata)</span>
+    </div>
+    <div class="sidebar-link" data-page="transactions" onclick="navigate('transactions')">
+      <span class="material-symbols-outlined text-xl">swap_horiz</span><span>Transactions</span>
+    </div>
+    <div class="sidebar-link" data-page="invoices" onclick="navigate('invoices')">
+      <span class="material-symbols-outlined text-xl">description</span><span>Invoices</span>
+    </div>
+    <div class="sidebar-link" data-page="expenses" onclick="navigate('expenses')">
+      <span class="material-symbols-outlined text-xl">receipt_long</span><span>Expenses</span>
+    </div>
+    <div class="sidebar-link" data-page="inventory" onclick="navigate('inventory')">
+      <span class="material-symbols-outlined text-xl">inventory_2</span><span>Inventory</span>
+    </div>
+    <div class="sidebar-link" data-page="reports" onclick="navigate('reports')">
+      <span class="material-symbols-outlined text-xl">assessment</span><span>Reports</span>
+    </div>
+    <div class="sidebar-link" data-page="ledger" onclick="navigate('ledger')">
+      <span class="material-symbols-outlined text-xl">menu_book</span><span>Ledger Accounts</span>
+    </div>
+  </nav>
+  <div class="px-3 pb-6 space-y-0.5">
+    <div class="sidebar-link" data-page="settings" onclick="navigate('settings')">
+      <span class="material-symbols-outlined text-xl">settings</span><span>Settings</span>
+    </div>
+    <div class="sidebar-link" onclick="exportAllData()">
+      <span class="material-symbols-outlined text-xl">download</span><span>Backup Data</span>
+    </div>
+  </div>
+</div>
+</aside>
+
+<!-- Top Bar -->
+<header class="top-bar fixed top-0 right-0 left-64 h-16 flex justify-between items-center px-6 z-30 bg-white/80 backdrop-blur-lg shadow-sm font-headline text-sm">
+<div class="flex items-center gap-3 flex-1">
+  <div class="relative w-full max-w-sm">
+    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">search</span>
+    <input id="globalSearch" class="w-full bg-surface-container-low border-none rounded-lg pl-9 pr-4 py-2 text-sm focus:ring-1 focus:ring-primary transition-all" placeholder="Search..." type="text" onkeyup="handleGlobalSearch(this.value)"/>
+  </div>
+</div>
+<div class="flex items-center gap-4">
+  <div class="hidden sm:flex items-center gap-1 text-xs text-outline">
+    <span class="material-symbols-outlined text-sm">storage</span>
+    <span id="storageInfo">Local</span>
+  </div>
+  <div class="h-6 w-px bg-outline-variant/30 hidden sm:block"></div>
+  <div class="w-8 h-8 rounded-full lithic-gradient flex items-center justify-center text-white font-bold text-xs" id="userAvatar">LP</div>
+</div>
+</header>
+
+<!-- Main Content -->
+<main class="main-content ml-64 pt-20 px-6 lg:px-10 pb-12">
+
+<!-- ==================== DASHBOARD PAGE ==================== -->
+<div id="page-dashboard" class="page active">
+  <div class="flex flex-col lg:flex-row gap-6 mb-8 items-end">
+    <div class="flex-1">
+      <h1 class="font-headline text-3xl lg:text-4xl font-extrabold tracking-tight text-primary mb-1">Dashboard</h1>
+      <p class="text-on-surface-variant text-sm">Overview of your business finances — all data stored on this device.</p>
+    </div>
+    <div class="flex gap-2">
+      <select id="dashPeriod" class="bg-surface-container-low border-none rounded-lg px-3 py-2 text-xs font-semibold focus:ring-1 focus:ring-primary" onchange="refreshDashboard()">
+        <option value="today">Today</option>
+        <option value="week">This Week</option>
+        <option value="month" selected>This Month</option>
+        <option value="quarter">This Quarter</option>
+        <option value="year">This Year</option>
+        <option value="all">All Time</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8" id="dashStats">
+  </div>
+
+  <!-- Charts Row -->
+  <div class="grid grid-cols-12 gap-6 mb-8">
+    <div class="col-span-12 lg:col-span-5 bg-white rounded-xl p-6 shadow-sm">
+      <h3 class="font-headline text-lg font-bold text-primary mb-4">Top Expense Categories</h3>
+      <div id="topCategories" class="space-y-3"></div>
+    </div>
+    <div class="col-span-12 lg:col-span-7 bg-white rounded-xl p-6 shadow-sm">
+      <h3 class="font-headline text-lg font-bold text-primary mb-4">Recent Activity</h3>
+      <div id="recentActivity" class="space-y-2"></div>
+    </div>
+  </div>
+
+  <!-- Outstanding -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-xl p-6 shadow-sm">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-headline text-lg font-bold text-primary">To Receive (Debtors)</h3>
+        <span class="font-headline text-xl font-extrabold text-green-700 tabular-nums" id="totalReceivable">₹0</span>
+      </div>
+      <div id="topDebtors" class="space-y-2"></div>
+    </div>
+    <div class="bg-white rounded-xl p-6 shadow-sm">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-headline text-lg font-bold text-primary">To Pay (Creditors)</h3>
+        <span class="font-headline text-xl font-extrabold text-red-700 tabular-nums" id="totalPayable">₹0</span>
+      </div>
+      <div id="topCreditors" class="space-y-2"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PARTIES PAGE ==================== -->
+<div id="page-parties" class="page">
+  <div class="flex flex-col sm:flex-row gap-4 mb-8 items-start sm:items-end justify-between">
+    <div>
+      <h1 class="font-headline text-3xl lg:text-4xl font-extrabold tracking-tight text-primary mb-1">Parties (Khata)</h1>
+      <p class="text-on-surface-variant text-sm">Manage customers & suppliers. Track credit and debit balances.</p>
+    </div>
+    <button class="lithic-gradient text-on-primary px-5 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider flex items-center gap-2 active:scale-95 transition-transform whitespace-nowrap" onclick="openPartyModal()">
+      <span class="material-symbols-outlined text-sm">add</span> Add Party
+    </button>
+  </div>
+  <!-- Filter Tabs -->
+  <div class="flex gap-2 mb-6">
+    <button class="party-filter px-4 py-2 rounded-lg text-xs font-bold transition-all bg-primary text-white" data-filter="all" onclick="filterParties('all',this)">All</button>
+    <button class="party-filter px-4 py-2 rounded-lg text-xs font-bold transition-all bg-surface-container-low text-on-surface-variant" data-filter="customer" onclick="filterParties('customer',this)">Customers</button>
+    <button class="party-filter px-4 py-2 rounded-lg text-xs font-bold transition-all bg-surface-container-low text-on-surface-variant" data-filter="supplier" onclick="filterParties('supplier',this)">Suppliers</button>
+  </div>
+  <div id="partiesList" class="space-y-2"></div>
+</div>
+
+<!-- ==================== PARTY DETAIL PAGE ==================== -->
+<div id="page-partyDetail" class="page">
+  <div class="mb-6">
+    <button class="text-sm text-primary font-semibold flex items-center gap-1 mb-4 hover:underline" onclick="navigate('parties')">
+      <span class="material-symbols-outlined text-lg">arrow_back</span> Back to Parties
+    </button>
+    <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      <div>
+        <h1 class="font-headline text-2xl font-extrabold text-primary" id="partyDetailName"></h1>
+        <p class="text-on-surface-variant text-sm" id="partyDetailInfo"></p>
+      </div>
+      <div class="flex gap-2">
+        <button class="bg-green-700 text-white px-4 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider flex items-center gap-2 active:scale-95 transition-transform" onclick="openKhataEntryModal('got')">
+          <span class="material-symbols-outlined text-sm">arrow_downward</span> You Got ₹
+        </button>
+        <button class="bg-red-700 text-white px-4 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider flex items-center gap-2 active:scale-95 transition-transform" onclick="openKhataEntryModal('gave')">
+          <span class="material-symbols-outlined text-sm">arrow_upward</span> You Gave ₹
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- Balance Card -->
+  <div class="bg-white rounded-xl p-6 shadow-sm mb-6" id="partyBalanceCard"></div>
+  <!-- Transaction History -->
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 flex items-center justify-between bg-surface-container-high/30">
+      <span class="font-headline font-bold text-primary">Transaction History</span>
+    </div>
+    <div id="partyTransactions" class="divide-y divide-surface-container-high/30"></div>
+  </div>
+</div>
+
+<!-- ==================== TRANSACTIONS PAGE ==================== -->
+<div id="page-transactions" class="page">
+  <div class="flex flex-col sm:flex-row gap-4 mb-8 items-start sm:items-end justify-between">
+    <div>
+      <h1 class="font-headline text-3xl lg:text-4xl font-extrabold tracking-tight text-primary mb-1">Transactions</h1>
+      <p class="text-on-surface-variant text-sm">All voucher entries — payments, receipts, journals, sales, purchases.</p>
+    </div>
+    <button class="lithic-gradient text-on-primary px-5 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider flex items-center gap-2 active:scale-95 transition-transform whitespace-nowrap" onclick="openTransactionModal()">
+      <span class="material-symbols-outlined text-sm">add</span> New Transaction
+    </button>
+  </div>
+  <div class="flex flex-wrap gap-2 mb-6">
+    <button class="txn-filter px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-primary text-white" data-filter="all" onclick="filterTransactions('all',this)">All</button>
+    <button class="txn-filter px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-surface-container-low text-on-surface-variant" data-filter="sale" onclick="filterTransactions('sale',this)">Sales</button>
+    <button class="txn-filter px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-surface-container-low text-on-surface-variant" data-filter="purchase" onclick="filterTransactions('purchase',this)">Purchases</button>
+    <button class="txn-filter px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-surface-container-low text-on-surface-variant" data-filter="payment" onclick="filterTransactions('payment',this)">Payments</button>
+    <button class="txn-filter px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-surface-container-low text-on-surface-variant" data-filter="receipt" onclick="filterTransactions('receipt',this)">Receipts</button>
+    <button class="txn-filter px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-surface-container-low text-on-surface-variant" data-filter="journal" onclick="filterTransactions('journal',this)">Journal</button>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 flex items-center justify-between bg-surface-container-high/30">
+      <div class="flex items-center gap-3">
+        <span class="font-headline font-bold text-primary">All Entries</span>
+        <span class="bg-surface-container-highest px-2.5 py-0.5 rounded-full text-[10px] font-bold text-on-surface-variant" id="txnCount">0</span>
+      </div>
+      <button class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-on-surface-variant hover:bg-surface-container-high transition-colors rounded-lg" onclick="exportTransactions()">
+        <span class="material-symbols-outlined text-sm">download</span> Export
+      </button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse" id="transactionsTable">
+        <thead>
+          <tr class="bg-surface-container-high/50">
+            <th class="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Date</th>
+            <th class="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Type</th>
+            <th class="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Party / Account</th>
+            <th class="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Category</th>
+            <th class="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant text-right">Amount</th>
+            <th class="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Notes</th>
+            <th class="px-6 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="transactionsBody" class="divide-y divide-surface-container-high/30"></tbody>
+      </table>
+    </div>
+    <div id="txnEmpty" class="empty-state hidden">
+      <span class="material-symbols-outlined text-5xl mb-3 text-outline-variant">swap_horiz</span>
+      <p class="font-semibold text-lg mb-1">No transactions yet</p>
+      <p class="text-sm">Click "New Transaction" to record your first entry.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== INVOICES PAGE ==================== -->
+<div id="page-invoices" class="page">
+  <div class="flex flex-col sm:flex-row gap-4 mb-8 items-start sm:items-end justify-between">
+    <div>
+      <h1 class="font-headline text-3xl lg:text-4xl font-extrabold tracking-tight text-primary mb-1">Invoices</h1>
+      <p class="text-on-surface-variant text-sm">Create GST-compliant invoices and track payment status.</p>
+    </div>
+    <button class="lithic-gradient text-on-primary px-5 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider flex items-center gap-2 active:scale-95 transition-transform whitespace-nowrap" onclick="openInvoiceModal()">
+      <span class="material-symbols-outlined text-sm">add</span> Create Invoice
+    </button>
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6" id="invoiceStats"></div>
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 bg-surface-container-high/30">
+      <span class="font-headline font-bold text-primary">All Invoices</span>
+    </div>
+    <div id="invoicesList" class="divide-y divide-surface-container-high/30"></div>
+    <div id="invEmpty" class="empty-state hidden">
+      <span class="material-symbols-outlined text-5xl mb-3 text-outline-variant">description</span>
+      <p class="font-semibold text-lg mb-1">No invoices created</p>
+      <p class="text-sm">Click "Create Invoice" to generate your first invoice.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== EXPENSES PAGE ==================== -->
+<div id="page-expenses" class="page">
+  <div class="flex flex-col md:flex-row gap-6 mb-8 items-end">
+    <div class="flex-1">
+      <h1 class="font-headline text-3xl lg:text-4xl font-extrabold tracking-tight text-primary mb-1">Expenses</h1>
+      <p class="text-on-surface-variant text-sm max-w-lg">Monitor operational costs and categorize spending.</p>
+    </div>
+    <div class="w-full md:w-72 stat-card group">
+      <div class="icon-bg"><span class="material-symbols-outlined">trending_up</span></div>
+      <div class="relative z-10">
+        <div class="flex justify-between items-start mb-3">
+          <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Total This Month</span>
+        </div>
+        <div class="font-headline text-2xl font-extrabold tabular-nums text-primary" id="expMonthTotal">₹0</div>
+      </div>
+    </div>
+  </div>
+  <div class="grid grid-cols-12 gap-6 mb-8">
+    <div class="col-span-12 lg:col-span-4 bg-surface-container-low rounded-xl p-6">
+      <h3 class="font-headline text-lg font-bold text-primary mb-4">Top Categories</h3>
+      <div id="expTopCats" class="space-y-3"></div>
+    </div>
+    <div class="col-span-12 lg:col-span-8 bg-white rounded-xl p-6 shadow-sm">
+      <h3 class="font-headline text-lg font-bold text-primary mb-2">Monthly Trend</h3>
+      <div id="expTrend" class="flex items-end gap-1 h-32 mt-4"></div>
+    </div>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 flex items-center justify-between bg-surface-container-high/30">
+      <div class="flex items-center gap-3">
+        <span class="font-headline font-bold text-primary">Expense Transactions</span>
+        <span class="bg-surface-container-highest px-2.5 py-0.5 rounded-full text-[10px] font-bold text-on-surface-variant" id="expCount">0</span>
+      </div>
+      <button class="lithic-gradient text-on-primary px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider flex items-center gap-2 active:scale-95 transition-transform" onclick="openExpenseModal()">
+        <span class="material-symbols-outlined text-sm">add</span> Add Expense
+      </button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-surface-container-high/50">
+            <th class="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Date</th>
+            <th class="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Vendor / Payee</th>
+            <th class="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Category</th>
+            <th class="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant text-right">Amount</th>
+            <th class="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Payment Mode</th>
+            <th class="px-6 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="expensesBody" class="divide-y divide-surface-container-high/30"></tbody>
+      </table>
+    </div>
+    <div id="expEmpty" class="empty-state hidden">
+      <span class="material-symbols-outlined text-5xl mb-3 text-outline-variant">receipt_long</span>
+      <p class="font-semibold text-lg mb-1">No expenses recorded</p>
+      <p class="text-sm">Click "Add Expense" to track your first expense.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== INVENTORY PAGE ==================== -->
+<div id="page-inventory" class="page">
+  <div class="flex flex-col sm:flex-row gap-4 mb-8 items-start sm:items-end justify-between">
+    <div>
+      <h1 class="font-headline text-3xl lg:text-4xl font-extrabold tracking-tight text-primary mb-1">Inventory</h1>
+      <p class="text-on-surface-variant text-sm">Manage stock items, quantities, and valuations.</p>
+    </div>
+    <button class="lithic-gradient text-on-primary px-5 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider flex items-center gap-2 active:scale-95 transition-transform whitespace-nowrap" onclick="openItemModal()">
+      <span class="material-symbols-outlined text-sm">add</span> Add Item
+    </button>
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6" id="invStats"></div>
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 bg-surface-container-high/30">
+      <span class="font-headline font-bold text-primary">Stock Items</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-surface-container-high/50">
+            <th class="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Item Name</th>
+            <th class="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">HSN Code</th>
+            <th class="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant text-right">Qty</th>
+            <th class="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant text-right">Rate (₹)</th>
+            <th class="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant text-right">Value (₹)</th>
+            <th class="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Unit</th>
+            <th class="px-6 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="inventoryBody" class="divide-y divide-surface-container-high/30"></tbody>
+      </table>
+    </div>
+    <div id="invEmpty" class="empty-state hidden">
+      <span class="material-symbols-outlined text-5xl mb-3 text-outline-variant">inventory_2</span>
+      <p class="font-semibold text-lg mb-1">No items in stock</p>
+      <p class="text-sm">Click "Add Item" to add your first stock item.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== REPORTS PAGE ==================== -->
+<div id="page-reports" class="page">
+  <div class="mb-8">
+    <h1 class="font-headline text-3xl lg:text-4xl font-extrabold tracking-tight text-primary mb-1">Reports</h1>
+    <p class="text-on-surface-variant text-sm">Financial statements and business analysis.</p>
+  </div>
+  <div class="flex flex-wrap gap-2 mb-6">
+    <button class="rpt-tab px-4 py-2 rounded-lg text-xs font-bold transition-all bg-primary text-white" onclick="showReport('pnl',this)">Profit & Loss</button>
+    <button class="rpt-tab px-4 py-2 rounded-lg text-xs font-bold transition-all bg-surface-container-low text-on-surface-variant" onclick="showReport('balancesheet',this)">Balance Sheet</button>
+    <button class="rpt-tab px-4 py-2 rounded-lg text-xs font-bold transition-all bg-surface-container-low text-on-surface-variant" onclick="showReport('daybook',this)">Day Book</button>
+    <button class="rpt-tab px-4 py-2 rounded-lg text-xs font-bold transition-all bg-surface-container-low text-on-surface-variant" onclick="showReport('cashbook',this)">Cash & Bank Book</button>
+    <button class="rpt-tab px-4 py-2 rounded-lg text-xs font-bold transition-all bg-surface-container-low text-on-surface-variant" onclick="showReport('gst',this)">GST Summary</button>
+    <button class="rpt-tab px-4 py-2 rounded-lg text-xs font-bold transition-all bg-surface-container-low text-on-surface-variant" onclick="showReport('outstanding',this)">Outstanding</button>
+  </div>
+  <div class="flex gap-3 mb-6">
+    <input type="date" id="rptFrom" class="bg-surface-container-low border-none rounded-lg px-3 py-2 text-xs font-semibold focus:ring-1 focus:ring-primary"/>
+    <input type="date" id="rptTo" class="bg-surface-container-low border-none rounded-lg px-3 py-2 text-xs font-semibold focus:ring-1 focus:ring-primary"/>
+    <button class="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold" onclick="generateReport()">Generate</button>
+  </div>
+  <div id="reportContent" class="bg-white rounded-xl shadow-sm p-6"></div>
+</div>
+
+<!-- ==================== LEDGER ACCOUNTS PAGE ==================== -->
+<div id="page-ledger" class="page">
+  <div class="flex flex-col sm:flex-row gap-4 mb-8 items-start sm:items-end justify-between">
+    <div>
+      <h1 class="font-headline text-3xl lg:text-4xl font-extrabold tracking-tight text-primary mb-1">Ledger Accounts</h1>
+      <p class="text-on-surface-variant text-sm">Chart of accounts — groups and ledgers.</p>
+    </div>
+    <button class="lithic-gradient text-on-primary px-5 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider flex items-center gap-2 active:scale-95 transition-transform whitespace-nowrap" onclick="openLedgerModal()">
+      <span class="material-symbols-outlined text-sm">add</span> Add Account
+    </button>
+  </div>
+  <div id="ledgerList" class="bg-white rounded-xl shadow-sm overflow-hidden"></div>
+</div>
+
+<!-- ==================== SETTINGS PAGE ==================== -->
+<div id="page-settings" class="page">
+  <div class="mb-8">
+    <h1 class="font-headline text-3xl lg:text-4xl font-extrabold tracking-tight text-primary mb-1">Settings</h1>
+    <p class="text-on-surface-variant text-sm">Company setup, categories, and data management.</p>
+  </div>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Company Info -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+      <h3 class="font-headline text-lg font-bold text-primary mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined">business</span> Company Information
+      </h3>
+      <div class="space-y-3">
+        <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Company Name</label>
+          <input id="setCompanyName" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" placeholder="Your Business Name"/></div>
+        <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">GSTIN</label>
+          <input id="setGstin" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" placeholder="22AAAAA0000A1Z5" maxlength="15"/></div>
+        <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">PAN</label>
+          <input id="setPan" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" placeholder="AAAAA0000A" maxlength="10"/></div>
+        <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Address</label>
+          <textarea id="setAddress" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" rows="2" placeholder="Business Address"></textarea></div>
+        <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Phone</label>
+          <input id="setPhone" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" placeholder="+91 XXXXX XXXXX"/></div>
+        <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Financial Year Start</label>
+          <select id="setFyStart" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary">
+            <option value="04">April (Default)</option><option value="01">January</option><option value="07">July</option>
+          </select></div>
+        <button class="w-full lithic-gradient text-on-primary px-5 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider mt-2 active:scale-95 transition-transform" onclick="saveSettings()">Save Company Info</button>
+      </div>
+    </div>
+    <!-- Categories -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+      <h3 class="font-headline text-lg font-bold text-primary mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined">category</span> Expense Categories
+      </h3>
+      <div class="flex gap-2 mb-4">
+        <input id="newCategoryInput" class="flex-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" placeholder="New category name"/>
+        <button class="px-4 py-2.5 bg-primary text-white rounded-lg text-xs font-bold" onclick="addCategory()">Add</button>
+      </div>
+      <div id="categoriesList" class="space-y-1"></div>
+    </div>
+    <!-- Data Management -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+      <h3 class="font-headline text-lg font-bold text-primary mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined">storage</span> Data Management
+      </h3>
+      <div class="space-y-3">
+        <button class="w-full flex items-center gap-3 px-4 py-3 bg-surface-container-low rounded-lg text-sm font-semibold hover:bg-surface-container transition-colors" onclick="exportAllData()">
+          <span class="material-symbols-outlined text-primary">download</span> Export All Data (JSON Backup)
+        </button>
+        <label class="w-full flex items-center gap-3 px-4 py-3 bg-surface-container-low rounded-lg text-sm font-semibold hover:bg-surface-container transition-colors cursor-pointer">
+          <span class="material-symbols-outlined text-primary">upload</span> Import Data (Restore Backup)
+          <input type="file" accept=".json" class="hidden" onchange="importAllData(event)"/>
+        </label>
+        <button class="w-full flex items-center gap-3 px-4 py-3 bg-red-50 rounded-lg text-sm font-semibold text-red-700 hover:bg-red-100 transition-colors" onclick="clearAllData()">
+          <span class="material-symbols-outlined">delete_forever</span> Clear All Data
+        </button>
+      </div>
+      <div class="mt-4 p-3 bg-surface-container-low rounded-lg">
+        <div class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Storage Usage</div>
+        <div id="storageDetails" class="text-sm text-on-surface-variant"></div>
+      </div>
+    </div>
+    <!-- GST Configuration -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+      <h3 class="font-headline text-lg font-bold text-primary mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined">percent</span> GST Configuration
+      </h3>
+      <div class="space-y-3">
+        <label class="flex items-center gap-3">
+          <input type="checkbox" id="setGstEnabled" class="rounded text-primary focus:ring-primary"/>
+          <span class="text-sm font-semibold">Enable GST</span>
+        </label>
+        <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Default GST Rate (%)</label>
+          <select id="setDefaultGst" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary">
+            <option value="0">0% (Exempt)</option><option value="5">5%</option><option value="12">12%</option>
+            <option value="18" selected>18%</option><option value="28">28%</option>
+          </select></div>
+        <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Business State</label>
+          <input id="setState" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" placeholder="e.g., Maharashtra"/></div>
+        <button class="w-full lithic-gradient text-on-primary px-5 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider mt-2 active:scale-95 transition-transform" onclick="saveSettings()">Save GST Settings</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- ==================== MODALS ==================== -->
+
+<!-- Party Modal -->
+<div id="partyModal" class="modal-overlay" onclick="if(event.target===this)closeModal('partyModal')">
+<div class="modal-content">
+  <div class="p-6 border-b border-surface-container-high/30">
+    <div class="flex items-center justify-between">
+      <h2 class="font-headline text-xl font-bold text-primary" id="partyModalTitle">Add Party</h2>
+      <button onclick="closeModal('partyModal')" class="text-outline hover:text-primary"><span class="material-symbols-outlined">close</span></button>
+    </div>
+  </div>
+  <div class="p-6 space-y-4">
+    <input type="hidden" id="partyId"/>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Name *</label>
+      <input id="partyName" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" placeholder="Party name"/></div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Type *</label>
+      <select id="partyType" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary">
+        <option value="customer">Customer</option><option value="supplier">Supplier</option><option value="both">Both</option>
+      </select></div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Phone</label>
+      <input id="partyPhone" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" placeholder="+91 XXXXX XXXXX"/></div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Email</label>
+      <input id="partyEmail" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" placeholder="email@example.com" type="email"/></div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">GSTIN</label>
+      <input id="partyGstin" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" placeholder="22AAAAA0000A1Z5" maxlength="15"/></div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Address</label>
+      <textarea id="partyAddress" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" rows="2" placeholder="Address"></textarea></div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Opening Balance (₹)</label>
+      <div class="flex gap-2 mt-1">
+        <input id="partyOpening" type="number" step="0.01" class="flex-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" placeholder="0.00"/>
+        <select id="partyOpeningType" class="bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary">
+          <option value="none">None</option><option value="receivable">To Receive</option><option value="payable">To Pay</option>
+        </select>
+      </div></div>
+  </div>
+  <div class="p-6 border-t border-surface-container-high/30 flex gap-3 justify-end">
+    <button class="px-5 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider text-on-surface-variant hover:bg-surface-container-low transition-colors" onclick="closeModal('partyModal')">Cancel</button>
+    <button class="lithic-gradient text-on-primary px-5 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider active:scale-95 transition-transform" onclick="saveParty()">Save Party</button>
+  </div>
+</div>
+</div>
+
+<!-- Khata Entry Modal -->
+<div id="khataModal" class="modal-overlay" onclick="if(event.target===this)closeModal('khataModal')">
+<div class="modal-content">
+  <div class="p-6 border-b border-surface-container-high/30">
+    <h2 class="font-headline text-xl font-bold" id="khataModalTitle">Record Entry</h2>
+  </div>
+  <div class="p-6 space-y-4">
+    <input type="hidden" id="khataPartyId"/>
+    <input type="hidden" id="khataType"/>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Amount (₹) *</label>
+      <input id="khataAmount" type="number" step="0.01" min="0.01" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-3 text-lg font-bold focus:ring-1 focus:ring-primary" placeholder="0.00" autofocus/></div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Date *</label>
+      <input id="khataDate" type="date" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary"/></div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Notes</label>
+      <input id="khataNotes" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" placeholder="Optional note"/></div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Payment Mode</label>
+      <select id="khataPaymentMode" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary">
+        <option value="cash">Cash</option><option value="upi">UPI</option><option value="bank">Bank Transfer</option>
+        <option value="cheque">Cheque</option><option value="card">Card</option><option value="other">Other</option>
+      </select></div>
+  </div>
+  <div class="p-6 border-t border-surface-container-high/30 flex gap-3 justify-end">
+    <button class="px-5 py-2.5 rounded-lg font-bold text-xs uppercase text-on-surface-variant hover:bg-surface-container-low transition-colors" onclick="closeModal('khataModal')">Cancel</button>
+    <button class="lithic-gradient text-on-primary px-5 py-2.5 rounded-lg font-bold text-xs uppercase active:scale-95 transition-transform" onclick="saveKhataEntry()">Save Entry</button>
+  </div>
+</div>
+</div>
+
+<!-- Transaction Modal -->
+<div id="transactionModal" class="modal-overlay" onclick="if(event.target===this)closeModal('transactionModal')">
+<div class="modal-content" style="max-width:640px">
+  <div class="p-6 border-b border-surface-container-high/30">
+    <div class="flex items-center justify-between">
+      <h2 class="font-headline text-xl font-bold text-primary" id="txnModalTitle">New Transaction</h2>
+      <button onclick="closeModal('transactionModal')" class="text-outline hover:text-primary"><span class="material-symbols-outlined">close</span></button>
+    </div>
+  </div>
+  <div class="p-6 space-y-4">
+    <input type="hidden" id="txnId"/>
+    <div class="grid grid-cols-2 gap-4">
+      <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Type *</label>
+        <select id="txnType" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" onchange="onTxnTypeChange()">
+          <option value="sale">Sale</option><option value="purchase">Purchase</option>
+          <option value="payment">Payment (You Paid)</option><option value="receipt">Receipt (You Received)</option>
+          <option value="journal">Journal Entry</option><option value="contra">Contra (Fund Transfer)</option>
+          <option value="expense">Expense</option>
+        </select></div>
+      <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Date *</label>
+        <input id="txnDate" type="date" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary"/></div>
+    </div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Voucher No.</label>
+      <input id="txnVoucherNo" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" placeholder="Auto-generated if empty"/></div>
+    <div id="txnPartyWrap"><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Party</label>
+      <select id="txnParty" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary"><option value="">-- Select Party --</option></select></div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Amount (₹) *</label>
+      <input id="txnAmount" type="number" step="0.01" min="0.01" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-3 text-lg font-bold focus:ring-1 focus:ring-primary" placeholder="0.00"/></div>
+    <div class="grid grid-cols-2 gap-4">
+      <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Category</label>
+        <select id="txnCategory" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary"></select></div>
+      <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Payment Mode</label>
+        <select id="txnPaymentMode" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary">
+          <option value="cash">Cash</option><option value="upi">UPI</option><option value="bank">Bank Transfer</option>
+          <option value="cheque">Cheque</option><option value="card">Card</option><option value="other">Other</option>
+        </select></div>
+    </div>
+    <div id="txnGstWrap" class="grid grid-cols-2 gap-4">
+      <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">GST Rate (%)</label>
+        <select id="txnGstRate" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" onchange="calcTxnGst()">
+          <option value="0">0%</option><option value="5">5%</option><option value="12">12%</option>
+          <option value="18">18%</option><option value="28">28%</option>
+        </select></div>
+      <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">GST Amount (₹)</label>
+        <input id="txnGstAmount" type="number" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm" readonly/></div>
+    </div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Narration / Notes</label>
+      <textarea id="txnNotes" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" rows="2" placeholder="Description of transaction"></textarea></div>
+  </div>
+  <div class="p-6 border-t border-surface-container-high/30 flex gap-3 justify-end">
+    <button class="px-5 py-2.5 rounded-lg font-bold text-xs uppercase text-on-surface-variant hover:bg-surface-container-low transition-colors" onclick="closeModal('transactionModal')">Cancel</button>
+    <button class="lithic-gradient text-on-primary px-5 py-2.5 rounded-lg font-bold text-xs uppercase active:scale-95 transition-transform" onclick="saveTransaction()">Save</button>
+  </div>
+</div>
+</div>
+
+<!-- Expense Modal -->
+<div id="expenseModal" class="modal-overlay" onclick="if(event.target===this)closeModal('expenseModal')">
+<div class="modal-content">
+  <div class="p-6 border-b border-surface-container-high/30">
+    <div class="flex items-center justify-between">
+      <h2 class="font-headline text-xl font-bold text-primary" id="expModalTitle">Add Expense</h2>
+      <button onclick="closeModal('expenseModal')" class="text-outline hover:text-primary"><span class="material-symbols-outlined">close</span></button>
+    </div>
+  </div>
+  <div class="p-6 space-y-4">
+    <input type="hidden" id="expId"/>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Amount (₹) *</label>
+      <input id="expAmount" type="number" step="0.01" min="0.01" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-3 text-lg font-bold focus:ring-1 focus:ring-primary" placeholder="0.00"/></div>
+    <div class="grid grid-cols-2 gap-4">
+      <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Date *</label>
+        <input id="expDate" type="date" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary"/></div>
+      <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Category *</label>
+        <select id="expCategory" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary"></select></div>
+    </div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Vendor / Payee</label>
+      <input id="expVendor" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" placeholder="Who did you pay?"/></div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Payment Mode</label>
+      <select id="expPayMode" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary">
+        <option value="cash">Cash</option><option value="upi">UPI</option><option value="bank">Bank Transfer</option>
+        <option value="cheque">Cheque</option><option value="card">Card</option>
+      </select></div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Notes</label>
+      <input id="expNotes" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" placeholder="Optional description"/></div>
+  </div>
+  <div class="p-6 border-t border-surface-container-high/30 flex gap-3 justify-end">
+    <button class="px-5 py-2.5 rounded-lg font-bold text-xs uppercase text-on-surface-variant hover:bg-surface-container-low transition-colors" onclick="closeModal('expenseModal')">Cancel</button>
+    <button class="lithic-gradient text-on-primary px-5 py-2.5 rounded-lg font-bold text-xs uppercase active:scale-95 transition-transform" onclick="saveExpense()">Save</button>
+  </div>
+</div>
+</div>
+
+<!-- Invoice Modal -->
+<div id="invoiceModal" class="modal-overlay" onclick="if(event.target===this)closeModal('invoiceModal')">
+<div class="modal-content" style="max-width:700px">
+  <div class="p-6 border-b border-surface-container-high/30">
+    <div class="flex items-center justify-between">
+      <h2 class="font-headline text-xl font-bold text-primary" id="invModalTitle">Create Invoice</h2>
+      <button onclick="closeModal('invoiceModal')" class="text-outline hover:text-primary"><span class="material-symbols-outlined">close</span></button>
+    </div>
+  </div>
+  <div class="p-6 space-y-4">
+    <input type="hidden" id="invId"/>
+    <div class="grid grid-cols-2 gap-4">
+      <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Invoice No. *</label>
+        <input id="invNumber" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" placeholder="INV-001"/></div>
+      <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Date *</label>
+        <input id="invDate" type="date" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary"/></div>
+    </div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Customer *</label>
+      <select id="invParty" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary"><option value="">-- Select Customer --</option></select></div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Due Date</label>
+      <input id="invDueDate" type="date" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary"/></div>
+    <!-- Line Items -->
+    <div>
+      <div class="flex items-center justify-between mb-2">
+        <label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Line Items</label>
+        <button class="text-xs font-bold text-primary flex items-center gap-1" onclick="addInvLine()"><span class="material-symbols-outlined text-sm">add</span> Add Item</button>
+      </div>
+      <div id="invLines" class="space-y-2"></div>
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+      <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">GST Rate (%)</label>
+        <select id="invGstRate" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" onchange="calcInvTotal()">
+          <option value="0">0%</option><option value="5">5%</option><option value="12">12%</option>
+          <option value="18">18%</option><option value="28">28%</option>
+        </select></div>
+      <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Discount (₹)</label>
+        <input id="invDiscount" type="number" step="0.01" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" value="0" onchange="calcInvTotal()"/></div>
+    </div>
+    <div class="bg-surface-container-low rounded-lg p-4 space-y-1">
+      <div class="flex justify-between text-sm"><span>Subtotal</span><span class="font-bold tabular-nums" id="invSubtotal">₹0.00</span></div>
+      <div class="flex justify-between text-sm"><span>GST</span><span class="font-bold tabular-nums" id="invGstAmt">₹0.00</span></div>
+      <div class="flex justify-between text-sm"><span>Discount</span><span class="font-bold tabular-nums" id="invDiscAmt">₹0.00</span></div>
+      <div class="flex justify-between text-lg font-bold border-t border-outline-variant/30 pt-2 mt-2"><span>Total</span><span class="tabular-nums text-primary" id="invTotal">₹0.00</span></div>
+    </div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Notes</label>
+      <textarea id="invNotes" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" rows="2" placeholder="Thank you for your business!"></textarea></div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Status</label>
+      <select id="invStatus" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary">
+        <option value="draft">Draft</option><option value="sent">Sent</option><option value="paid">Paid</option><option value="overdue">Overdue</option><option value="cancelled">Cancelled</option>
+      </select></div>
+  </div>
+  <div class="p-6 border-t border-surface-container-high/30 flex gap-3 justify-end">
+    <button class="px-5 py-2.5 rounded-lg font-bold text-xs uppercase text-on-surface-variant hover:bg-surface-container-low transition-colors" onclick="closeModal('invoiceModal')">Cancel</button>
+    <button class="lithic-gradient text-on-primary px-5 py-2.5 rounded-lg font-bold text-xs uppercase active:scale-95 transition-transform" onclick="saveInvoice()">Save Invoice</button>
+  </div>
+</div>
+</div>
+
+<!-- Stock Item Modal -->
+<div id="itemModal" class="modal-overlay" onclick="if(event.target===this)closeModal('itemModal')">
+<div class="modal-content">
+  <div class="p-6 border-b border-surface-container-high/30">
+    <div class="flex items-center justify-between">
+      <h2 class="font-headline text-xl font-bold text-primary" id="itemModalTitle">Add Stock Item</h2>
+      <button onclick="closeModal('itemModal')" class="text-outline hover:text-primary"><span class="material-symbols-outlined">close</span></button>
+    </div>
+  </div>
+  <div class="p-6 space-y-4">
+    <input type="hidden" id="itemId"/>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Item Name *</label>
+      <input id="itemName" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" placeholder="Product/Item name"/></div>
+    <div class="grid grid-cols-2 gap-4">
+      <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">HSN Code</label>
+        <input id="itemHsn" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" placeholder="e.g., 8471"/></div>
+      <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Unit</label>
+        <select id="itemUnit" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary">
+          <option value="Nos">Nos</option><option value="Kg">Kg</option><option value="Ltr">Ltr</option>
+          <option value="Mtr">Mtr</option><option value="Pcs">Pcs</option><option value="Box">Box</option>
+          <option value="Set">Set</option><option value="Pair">Pair</option><option value="Dozen">Dozen</option>
+        </select></div>
+    </div>
+    <div class="grid grid-cols-3 gap-4">
+      <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Opening Qty</label>
+        <input id="itemQty" type="number" step="0.01" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" value="0"/></div>
+      <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Purchase Rate (₹)</label>
+        <input id="itemCostPrice" type="number" step="0.01" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" value="0"/></div>
+      <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Sale Rate (₹)</label>
+        <input id="itemSalePrice" type="number" step="0.01" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" value="0"/></div>
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+      <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">GST Rate (%)</label>
+        <select id="itemGst" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary">
+          <option value="0">0%</option><option value="5">5%</option><option value="12">12%</option>
+          <option value="18" selected>18%</option><option value="28">28%</option>
+        </select></div>
+      <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Reorder Level</label>
+        <input id="itemReorder" type="number" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" value="0"/></div>
+    </div>
+  </div>
+  <div class="p-6 border-t border-surface-container-high/30 flex gap-3 justify-end">
+    <button class="px-5 py-2.5 rounded-lg font-bold text-xs uppercase text-on-surface-variant hover:bg-surface-container-low transition-colors" onclick="closeModal('itemModal')">Cancel</button>
+    <button class="lithic-gradient text-on-primary px-5 py-2.5 rounded-lg font-bold text-xs uppercase active:scale-95 transition-transform" onclick="saveItem()">Save Item</button>
+  </div>
+</div>
+</div>
+
+<!-- Ledger Account Modal -->
+<div id="ledgerModal" class="modal-overlay" onclick="if(event.target===this)closeModal('ledgerModal')">
+<div class="modal-content">
+  <div class="p-6 border-b border-surface-container-high/30">
+    <div class="flex items-center justify-between">
+      <h2 class="font-headline text-xl font-bold text-primary">Add Ledger Account</h2>
+      <button onclick="closeModal('ledgerModal')" class="text-outline hover:text-primary"><span class="material-symbols-outlined">close</span></button>
+    </div>
+  </div>
+  <div class="p-6 space-y-4">
+    <input type="hidden" id="ledgerId"/>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Account Name *</label>
+      <input id="ledgerName" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" placeholder="Account name"/></div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Group *</label>
+      <select id="ledgerGroup" class="w-full mt-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary">
+        <optgroup label="Assets"><option value="Cash-in-Hand">Cash-in-Hand</option><option value="Bank Accounts">Bank Accounts</option><option value="Sundry Debtors">Sundry Debtors</option><option value="Stock-in-Hand">Stock-in-Hand</option><option value="Fixed Assets">Fixed Assets</option><option value="Deposits">Deposits</option><option value="Investments">Investments</option><option value="Loans & Advances (Asset)">Loans & Advances (Asset)</option></optgroup>
+        <optgroup label="Liabilities"><option value="Sundry Creditors">Sundry Creditors</option><option value="Duties & Taxes">Duties & Taxes</option><option value="Provisions">Provisions</option><option value="Secured Loans">Secured Loans</option><option value="Unsecured Loans">Unsecured Loans</option><option value="Capital Account">Capital Account</option><option value="Reserves & Surplus">Reserves & Surplus</option></optgroup>
+        <optgroup label="Income"><option value="Sales Accounts">Sales Accounts</option><option value="Direct Incomes">Direct Incomes</option><option value="Indirect Incomes">Indirect Incomes</option></optgroup>
+        <optgroup label="Expenses"><option value="Purchase Accounts">Purchase Accounts</option><option value="Direct Expenses">Direct Expenses</option><option value="Indirect Expenses">Indirect Expenses</option></optgroup>
+      </select></div>
+    <div><label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Opening Balance (₹)</label>
+      <div class="flex gap-2 mt-1">
+        <input id="ledgerOpenBal" type="number" step="0.01" class="flex-1 bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary" value="0"/>
+        <select id="ledgerOpenType" class="bg-surface-container-low border-none rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary">
+          <option value="Dr">Dr</option><option value="Cr">Cr</option>
+        </select>
+      </div></div>
+  </div>
+  <div class="p-6 border-t border-surface-container-high/30 flex gap-3 justify-end">
+    <button class="px-5 py-2.5 rounded-lg font-bold text-xs uppercase text-on-surface-variant hover:bg-surface-container-low transition-colors" onclick="closeModal('ledgerModal')">Cancel</button>
+    <button class="lithic-gradient text-on-primary px-5 py-2.5 rounded-lg font-bold text-xs uppercase active:scale-95 transition-transform" onclick="saveLedger()">Save</button>
+  </div>
+</div>
+</div>
+
+<!-- Invoice Preview Modal -->
+<div id="invoicePreviewModal" class="modal-overlay" onclick="if(event.target===this)closeModal('invoicePreviewModal')">
+<div class="modal-content" style="max-width:700px">
+  <div class="p-6 border-b border-surface-container-high/30 flex items-center justify-between">
+    <h2 class="font-headline text-xl font-bold text-primary">Invoice Preview</h2>
+    <div class="flex gap-2">
+      <button class="px-3 py-1.5 text-xs font-bold bg-primary text-white rounded-lg flex items-center gap-1" onclick="printInvoice()"><span class="material-symbols-outlined text-sm">print</span> Print</button>
+      <button onclick="closeModal('invoicePreviewModal')" class="text-outline hover:text-primary"><span class="material-symbols-outlined">close</span></button>
+    </div>
+  </div>
+  <div id="invoicePreviewContent" class="p-8"></div>
+</div>
+</div>
+
+<!-- ==================== JAVASCRIPT ==================== -->
+<script>
+// =========================================
+// DATABASE LAYER (IndexedDB)
+// =========================================
+const DB_NAME = 'LedgerProDB';
+const DB_VERSION = 3;
+let db;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const d = e.target.result;
+      const stores = ['parties','transactions','expenses','invoices','items','ledgers','categories','settings'];
+      stores.forEach(s => { if (!d.objectStoreNames.contains(s)) { const st = d.createObjectStore(s, {keyPath:'id'}); if(s==='transactions'||s==='expenses'){st.createIndex('date','date');st.createIndex('type','type');} if(s==='parties'){st.createIndex('type','type');} }});
+    };
+    req.onsuccess = (e) => { db = e.target.result; resolve(db); };
+    req.onerror = (e) => reject(e);
+  });
+}
+
+function dbAdd(store, data) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).add(data);
+    tx.oncomplete = () => resolve(data);
+    tx.onerror = (e) => reject(e);
+  });
+}
+
+function dbPut(store, data) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).put(data);
+    tx.oncomplete = () => resolve(data);
+    tx.onerror = (e) => reject(e);
+  });
+}
+
+function dbDelete(store, id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e);
+  });
+}
+
+function dbGetAll(store) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = (e) => reject(e);
+  });
+}
+
+function dbGet(store, id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).get(id);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = (e) => reject(e);
+  });
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 9); }
+
+// =========================================
+// APP STATE
+// =========================================
+let currentPage = 'dashboard';
+let currentPartyId = null;
+let currentTxnFilter = 'all';
+let currentPartyFilter = 'all';
+let currentReportType = 'pnl';
+let appSettings = {};
+let invoiceLineCount = 0;
+
+const DEFAULT_CATEGORIES = ['Rent','Salary','Utilities','Travel','Food','Office Supplies','Internet & Phone','Software & Subscriptions','Marketing','Insurance','Maintenance','Professional Services','Fuel','Courier & Shipping','Miscellaneous'];
+
+const CATEGORY_COLORS = {'Rent':'#ef4444','Salary':'#f97316','Utilities':'#eab308','Travel':'#22c55e','Food':'#14b8a6','Office Supplies':'#06b6d4','Internet & Phone':'#3b82f6','Software & Subscriptions':'#6366f1','Marketing':'#8b5cf6','Insurance':'#a855f7','Maintenance':'#d946ef','Professional Services':'#ec4899','Fuel':'#f43f5e','Courier & Shipping':'#64748b','Miscellaneous':'#94a3b8','Sales':'#10b981','Purchase':'#f59e0b','General':'#6b7280'};
+
+// =========================================
+// UTILITY FUNCTIONS
+// =========================================
+function fmt(n) { return '₹' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function fmtShort(n) { const a = Math.abs(n||0); if(a>=10000000) return '₹'+(n/10000000).toFixed(1)+'Cr'; if(a>=100000) return '₹'+(n/100000).toFixed(1)+'L'; if(a>=1000) return '₹'+(n/1000).toFixed(1)+'K'; return fmt(n); }
+function fmtDate(d) { if(!d) return ''; const dt = new Date(d); return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+function today() { return new Date().toISOString().split('T')[0]; }
+function getMonthStart() { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]; }
+function getMonthEnd() { const d = new Date(); d.setMonth(d.getMonth()+1,0); return d.toISOString().split('T')[0]; }
+function initials(name) { return (name||'??').split(' ').map(w=>w[0]).join('').toUpperCase().substr(0,3); }
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast ' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// =========================================
+// NAVIGATION
+// =========================================
+function navigate(page, data) {
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const el = document.getElementById('page-' + page);
+  if (el) el.classList.add('active');
+  document.querySelectorAll('.sidebar-link').forEach(l => {
+    l.classList.toggle('active', l.dataset.page === page);
+  });
+  // Close mobile sidebar
+  document.getElementById('sidebar').classList.remove('open');
+  // Refresh page data
+  switch(page) {
+    case 'dashboard': refreshDashboard(); break;
+    case 'parties': loadParties(); break;
+    case 'partyDetail': if(data) { currentPartyId = data; loadPartyDetail(); } break;
+    case 'transactions': loadTransactions(); break;
+    case 'invoices': loadInvoices(); break;
+    case 'expenses': loadExpenses(); break;
+    case 'inventory': loadInventory(); break;
+    case 'reports': generateReport(); break;
+    case 'ledger': loadLedgers(); break;
+    case 'settings': loadSettings(); break;
+  }
+}
+
+// =========================================
+// DASHBOARD
+// =========================================
+async function refreshDashboard() {
+  const period = document.getElementById('dashPeriod').value;
+  const txns = await dbGetAll('transactions');
+  const expenses = await dbGetAll('expenses');
+  const parties = await dbGetAll('parties');
+  const invoices = await dbGetAll('invoices');
+  
+  // Date filtering
+  let fromDate, toDate = new Date();
+  const now = new Date();
+  switch(period) {
+    case 'today': fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()); break;
+    case 'week': fromDate = new Date(now); fromDate.setDate(now.getDate() - 7); break;
+    case 'month': fromDate = new Date(now.getFullYear(), now.getMonth(), 1); break;
+    case 'quarter': fromDate = new Date(now.getFullYear(), Math.floor(now.getMonth()/3)*3, 1); break;
+    case 'year': fromDate = new Date(now.getFullYear(), 3, 1); if(now.getMonth()<3) fromDate.setFullYear(fromDate.getFullYear()-1); break;
+    default: fromDate = new Date(2000,0,1);
+  }
+  const fs = fromDate.toISOString().split('T')[0];
+  const ts = toDate.toISOString().split('T')[0];
+  
+  const filtTxns = txns.filter(t => t.date >= fs && t.date <= ts);
+  const filtExp = expenses.filter(e => e.date >= fs && e.date <= ts);
+  
+  const totalSales = filtTxns.filter(t=>t.type==='sale').reduce((s,t)=>s+Number(t.amount),0);
+  const totalPurchases = filtTxns.filter(t=>t.type==='purchase').reduce((s,t)=>s+Number(t.amount),0);
+  const totalExpenses = filtExp.reduce((s,e)=>s+Number(e.amount),0) + filtTxns.filter(t=>t.type==='expense').reduce((s,t)=>s+Number(t.amount),0);
+  const totalReceipts = filtTxns.filter(t=>t.type==='receipt').reduce((s,t)=>s+Number(t.amount),0);
+  
+  document.getElementById('dashStats').innerHTML = `
+    <div class="stat-card"><div class="icon-bg"><span class="material-symbols-outlined">trending_up</span></div>
+      <div class="relative z-10"><span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Total Sales</span>
+      <div class="font-headline text-2xl font-extrabold tabular-nums text-green-700 mt-2">${fmt(totalSales)}</div></div></div>
+    <div class="stat-card"><div class="icon-bg"><span class="material-symbols-outlined">shopping_cart</span></div>
+      <div class="relative z-10"><span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Total Purchases</span>
+      <div class="font-headline text-2xl font-extrabold tabular-nums text-blue-700 mt-2">${fmt(totalPurchases)}</div></div></div>
+    <div class="stat-card"><div class="icon-bg"><span class="material-symbols-outlined">receipt_long</span></div>
+      <div class="relative z-10"><span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Total Expenses</span>
+      <div class="font-headline text-2xl font-extrabold tabular-nums text-red-700 mt-2">${fmt(totalExpenses)}</div></div></div>
+    <div class="stat-card"><div class="icon-bg"><span class="material-symbols-outlined">account_balance</span></div>
+      <div class="relative z-10"><span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Net Profit</span>
+      <div class="font-headline text-2xl font-extrabold tabular-nums ${totalSales-totalPurchases-totalExpenses>=0?'text-green-700':'text-red-700'} mt-2">${fmt(totalSales - totalPurchases - totalExpenses)}</div></div></div>
+  `;
+
+  // Top categories
+  const catTotals = {};
+  filtExp.forEach(e => { catTotals[e.category] = (catTotals[e.category]||0) + Number(e.amount); });
+  filtTxns.filter(t=>t.type==='expense').forEach(t=>{ catTotals[t.category||'Miscellaneous'] = (catTotals[t.category||'Miscellaneous']||0) + Number(t.amount); });
+  const topCats = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  document.getElementById('topCategories').innerHTML = topCats.length ? topCats.map(([cat,amt]) => `
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full" style="background:${CATEGORY_COLORS[cat]||'#64748b'}"></div><span class="text-xs font-medium">${cat}</span></div>
+      <span class="text-xs font-bold tabular-nums">${fmt(amt)}</span>
+    </div>`).join('') : '<p class="text-xs text-outline">No expenses recorded yet.</p>';
+
+  // Recent activity
+  const allActivity = [...txns.map(t=>({...t,src:'txn'})), ...expenses.map(e=>({...e,src:'exp',type:'expense'}))].sort((a,b)=>b.date>a.date?1:-1).slice(0,8);
+  document.getElementById('recentActivity').innerHTML = allActivity.length ? allActivity.map(a => {
+    const isDebit = ['purchase','payment','expense'].includes(a.type);
+    return `<div class="flex items-center justify-between py-2">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg ${isDebit?'bg-red-50':'bg-green-50'} flex items-center justify-center">
+          <span class="material-symbols-outlined text-sm ${isDebit?'text-red-600':'text-green-600'}">${isDebit?'arrow_upward':'arrow_downward'}</span>
+        </div>
+        <div><div class="text-xs font-semibold">${a.partyName||a.vendor||a.category||a.type}</div><div class="text-[10px] text-outline">${fmtDate(a.date)} · ${a.type}</div></div>
+      </div>
+      <span class="text-sm font-bold tabular-nums ${isDebit?'text-red-700':'text-green-700'}">${isDebit?'−':'+'} ${fmt(a.amount)}</span>
+    </div>`;
+  }).join('') : '<p class="text-xs text-outline">No activity yet.</p>';
+
+  // Outstanding
+  const receivable = {}, payable = {};
+  parties.forEach(p => { receivable[p.id] = 0; payable[p.id] = 0; if(p.openingType==='receivable') receivable[p.id] += Number(p.openingBalance||0); if(p.openingType==='payable') payable[p.id] += Number(p.openingBalance||0); });
+  txns.forEach(t => {
+    if(!t.partyId) return;
+    if(t.type==='sale') receivable[t.partyId] = (receivable[t.partyId]||0) + Number(t.amount);
+    if(t.type==='receipt') receivable[t.partyId] = (receivable[t.partyId]||0) - Number(t.amount);
+    if(t.type==='purchase') payable[t.partyId] = (payable[t.partyId]||0) + Number(t.amount);
+    if(t.type==='payment') payable[t.partyId] = (payable[t.partyId]||0) - Number(t.amount);
+  });
+  
+  let totalRec = 0, totalPay = 0;
+  const debtors = [], creditors = [];
+  parties.forEach(p => {
+    const r = receivable[p.id] || 0;
+    const pa = payable[p.id] || 0;
+    if(r > 0) { debtors.push({name:p.name,amount:r}); totalRec += r; }
+    if(pa > 0) { creditors.push({name:p.name,amount:pa}); totalPay += pa; }
+  });
+  debtors.sort((a,b)=>b.amount-a.amount);
+  creditors.sort((a,b)=>b.amount-a.amount);
+  
+  document.getElementById('totalReceivable').textContent = fmt(totalRec);
+  document.getElementById('totalPayable').textContent = fmt(totalPay);
+  document.getElementById('topDebtors').innerHTML = debtors.slice(0,5).map(d => `
+    <div class="flex items-center justify-between py-2"><span class="text-sm font-medium">${d.name}</span><span class="text-sm font-bold tabular-nums text-green-700">${fmt(d.amount)}</span></div>
+  `).join('') || '<p class="text-xs text-outline">No receivables.</p>';
+  document.getElementById('topCreditors').innerHTML = creditors.slice(0,5).map(c => `
+    <div class="flex items-center justify-between py-2"><span class="text-sm font-medium">${c.name}</span><span class="text-sm font-bold tabular-nums text-red-700">${fmt(c.amount)}</span></div>
+  `).join('') || '<p class="text-xs text-outline">No payables.</p>';
+}
+
+// =========================================
+// PARTIES (KHATA)
+// =========================================
+async function loadParties() {
+  const parties = await dbGetAll('parties');
+  const txns = await dbGetAll('transactions');
+  const filtered = currentPartyFilter === 'all' ? parties : parties.filter(p => p.type === currentPartyFilter || p.type === 'both');
+  
+  // Compute balances
+  const balances = {};
+  parties.forEach(p => {
+    let bal = 0;
+    if(p.openingType==='receivable') bal += Number(p.openingBalance||0);
+    if(p.openingType==='payable') bal -= Number(p.openingBalance||0);
+    txns.forEach(t => {
+      if(t.partyId !== p.id) return;
+      if(t.type==='sale'||t.type==='receipt_khata') bal += Number(t.amount);
+      else if(t.type==='purchase'||t.type==='gave_khata') bal -= Number(t.amount);
+      else if(t.type==='receipt'||t.type==='got_khata') bal -= Number(t.amount);
+      else if(t.type==='payment') bal += Number(t.amount);
+    });
+    balances[p.id] = bal;
+  });
+
+  if(!filtered.length) {
+    document.getElementById('partiesList').innerHTML = `<div class="empty-state"><span class="material-symbols-outlined text-5xl mb-3 text-outline-variant">group</span><p class="font-semibold text-lg mb-1">No parties yet</p><p class="text-sm">Add your first customer or supplier.</p></div>`;
+    return;
+  }
+  
+  document.getElementById('partiesList').innerHTML = filtered.sort((a,b)=>a.name.localeCompare(b.name)).map(p => {
+    const bal = balances[p.id] || 0;
+    const balText = bal > 0 ? `You'll receive ${fmt(bal)}` : bal < 0 ? `You'll pay ${fmt(Math.abs(bal))}` : 'Settled';
+    const balColor = bal > 0 ? 'text-green-700' : bal < 0 ? 'text-red-700' : 'text-outline';
+    return `<div class="bg-white rounded-xl p-4 shadow-sm flex items-center justify-between cursor-pointer hover:shadow-md transition-shadow" onclick="navigate('partyDetail','${p.id}')">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg lithic-gradient flex items-center justify-center text-white font-bold text-xs">${initials(p.name)}</div>
+        <div><div class="text-sm font-bold text-primary">${p.name}</div><div class="text-[10px] text-outline">${p.type} ${p.phone?'· '+p.phone:''}</div></div>
+      </div>
+      <div class="text-right">
+        <div class="text-sm font-bold tabular-nums ${balColor}">${bal !== 0 ? fmt(Math.abs(bal)) : '₹0.00'}</div>
+        <div class="text-[10px] ${balColor}">${balText}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterParties(f, btn) {
+  currentPartyFilter = f;
+  document.querySelectorAll('.party-filter').forEach(b => { b.className = 'party-filter px-4 py-2 rounded-lg text-xs font-bold transition-all bg-surface-container-low text-on-surface-variant'; });
+  btn.className = 'party-filter px-4 py-2 rounded-lg text-xs font-bold transition-all bg-primary text-white';
+  loadParties();
+}
+
+function openPartyModal(id) {
+  document.getElementById('partyId').value = '';
+  document.getElementById('partyName').value = '';
+  document.getElementById('partyType').value = 'customer';
+  document.getElementById('partyPhone').value = '';
+  document.getElementById('partyEmail').value = '';
+  document.getElementById('partyGstin').value = '';
+  document.getElementById('partyAddress').value = '';
+  document.getElementById('partyOpening').value = '';
+  document.getElementById('partyOpeningType').value = 'none';
+  document.getElementById('partyModalTitle').textContent = 'Add Party';
+  if(id) {
+    dbGet('parties', id).then(p => {
+      if(!p) return;
+      document.getElementById('partyId').value = p.id;
+      document.getElementById('partyName').value = p.name;
+      document.getElementById('partyType').value = p.type;
+      document.getElementById('partyPhone').value = p.phone||'';
+      document.getElementById('partyEmail').value = p.email||'';
+      document.getElementById('partyGstin').value = p.gstin||'';
+      document.getElementById('partyAddress').value = p.address||'';
+      document.getElementById('partyOpening').value = p.openingBalance||'';
+      document.getElementById('partyOpeningType').value = p.openingType||'none';
+      document.getElementById('partyModalTitle').textContent = 'Edit Party';
+    });
+  }
+  openModal('partyModal');
+}
+
+async function saveParty() {
+  const name = document.getElementById('partyName').value.trim();
+  if(!name) { showToast('Party name is required','error'); return; }
+  const data = {
+    id: document.getElementById('partyId').value || uid(),
+    name, type: document.getElementById('partyType').value,
+    phone: document.getElementById('partyPhone').value.trim(),
+    email: document.getElementById('partyEmail').value.trim(),
+    gstin: document.getElementById('partyGstin').value.trim(),
+    address: document.getElementById('partyAddress').value.trim(),
+    openingBalance: Number(document.getElementById('partyOpening').value)||0,
+    openingType: document.getElementById('partyOpeningType').value,
+    createdAt: new Date().toISOString()
+  };
+  await dbPut('parties', data);
+  closeModal('partyModal');
+  showToast('Party saved successfully');
+  if(currentPage==='parties') loadParties();
+  if(currentPage==='dashboard') refreshDashboard();
+}
+
+async function deleteParty(id) {
+  if(!confirm('Delete this party and all their transactions?')) return;
+  await dbDelete('parties', id);
+  const txns = await dbGetAll('transactions');
+  for(const t of txns.filter(t=>t.partyId===id)) { await dbDelete('transactions', t.id); }
+  showToast('Party deleted');
+  navigate('parties');
+}
+
+// =========================================
+// PARTY DETAIL (KHATA VIEW)
+// =========================================
+async function loadPartyDetail() {
+  const party = await dbGet('parties', currentPartyId);
+  if(!party) { navigate('parties'); return; }
+  
+  document.getElementById('partyDetailName').textContent = party.name;
+  document.getElementById('partyDetailInfo').textContent = `${party.type} ${party.phone?'· '+party.phone:''} ${party.gstin?'· GSTIN: '+party.gstin:''}`;
+  
+  const txns = (await dbGetAll('transactions')).filter(t => t.partyId === currentPartyId).sort((a,b) => b.date > a.date ? 1 : -1);
+  
+  // Calculate balance
+  let bal = 0;
+  if(party.openingType==='receivable') bal += Number(party.openingBalance||0);
+  if(party.openingType==='payable') bal -= Number(party.openingBalance||0);
+  txns.forEach(t => {
+    if(['sale','gave_khata'].includes(t.type)) bal += Number(t.amount);
+    else if(['purchase'].includes(t.type)) bal -= Number(t.amount);
+    else if(['receipt','got_khata'].includes(t.type)) bal -= Number(t.amount);
+    else if(['payment'].includes(t.type)) bal += Number(t.amount);
+  });
+  
+  const balColor = bal > 0 ? 'text-green-700' : bal < 0 ? 'text-red-700' : 'text-outline';
+  const balLabel = bal > 0 ? 'You will receive' : bal < 0 ? 'You will pay' : 'Settled up';
+  
+  document.getElementById('partyBalanceCard').innerHTML = `
+    <div class="flex items-center justify-between">
+      <div><div class="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-1">${balLabel}</div>
+        <div class="font-headline text-3xl font-extrabold tabular-nums ${balColor}">${fmt(Math.abs(bal))}</div></div>
+      <div class="flex gap-2">
+        <button class="px-3 py-2 text-xs font-bold text-primary bg-surface-container-low rounded-lg hover:bg-surface-container transition-colors" onclick="openPartyModal('${party.id}')"><span class="material-symbols-outlined text-sm align-middle">edit</span> Edit</button>
+        <button class="px-3 py-2 text-xs font-bold text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors" onclick="deleteParty('${party.id}')"><span class="material-symbols-outlined text-sm align-middle">delete</span> Delete</button>
+      </div>
+    </div>`;
+  
+  document.getElementById('partyTransactions').innerHTML = txns.length ? txns.map(t => {
+    const isGave = ['sale','gave_khata','payment'].includes(t.type);
+    const isGot = ['receipt','got_khata','purchase'].includes(t.type);
+    return `<div class="flex items-center justify-between px-6 py-4 entry-row">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg ${isGave?'bg-red-50':'bg-green-50'} flex items-center justify-center">
+          <span class="material-symbols-outlined text-sm ${isGave?'text-red-600':'text-green-600'}">${isGave?'arrow_upward':'arrow_downward'}</span>
+        </div>
+        <div>
+          <div class="text-xs font-semibold">${t.type==='gave_khata'?'You Gave':t.type==='got_khata'?'You Got':t.type.charAt(0).toUpperCase()+t.type.slice(1)}</div>
+          <div class="text-[10px] text-outline">${fmtDate(t.date)} ${t.notes?'· '+t.notes:''} ${t.paymentMode?'· '+t.paymentMode:''}</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-sm font-bold tabular-nums ${isGave?'text-red-700':'text-green-700'}">${isGave?'−':'+'} ${fmt(t.amount)}</span>
+        <button class="text-outline hover:text-red-600 transition-colors" onclick="deleteTxn('${t.id}')"><span class="material-symbols-outlined text-sm">delete</span></button>
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty-state py-8"><p class="text-sm text-outline">No transactions with this party yet.</p></div>';
+}
+
+function openKhataEntryModal(type) {
+  document.getElementById('khataPartyId').value = currentPartyId;
+  document.getElementById('khataType').value = type;
+  document.getElementById('khataModalTitle').textContent = type === 'got' ? 'You Got ₹ (Received Money)' : 'You Gave ₹ (Gave Money/Goods)';
+  document.getElementById('khataModalTitle').className = 'font-headline text-xl font-bold ' + (type==='got'?'text-green-700':'text-red-700');
+  document.getElementById('khataAmount').value = '';
+  document.getElementById('khataDate').value = today();
+  document.getElementById('khataNotes').value = '';
+  document.getElementById('khataPaymentMode').value = 'cash';
+  openModal('khataModal');
+  setTimeout(() => document.getElementById('khataAmount').focus(), 100);
+}
+
+async function saveKhataEntry() {
+  const amount = Number(document.getElementById('khataAmount').value);
+  if(!amount || amount <= 0) { showToast('Enter valid amount','error'); return; }
+  const type = document.getElementById('khataType').value;
+  const party = await dbGet('parties', document.getElementById('khataPartyId').value);
+  const data = {
+    id: uid(),
+    type: type === 'got' ? 'got_khata' : 'gave_khata',
+    date: document.getElementById('khataDate').value || today(),
+    amount, partyId: party.id, partyName: party.name,
+    notes: document.getElementById('khataNotes').value.trim(),
+    paymentMode: document.getElementById('khataPaymentMode').value,
+    category: 'General', createdAt: new Date().toISOString()
+  };
+  await dbAdd('transactions', data);
+  closeModal('khataModal');
+  showToast(`₹${amount.toFixed(2)} ${type==='got'?'received from':'given to'} ${party.name}`);
+  loadPartyDetail();
+}
+
+async function deleteTxn(id) {
+  if(!confirm('Delete this transaction?')) return;
+  await dbDelete('transactions', id);
+  showToast('Transaction deleted');
+  if(currentPage==='partyDetail') loadPartyDetail();
+  else if(currentPage==='transactions') loadTransactions();
+  else if(currentPage==='dashboard') refreshDashboard();
+}
+
+// =========================================
+// TRANSACTIONS
+// =========================================
+async function loadTransactions() {
+  const txns = await dbGetAll('transactions');
+  const filtered = currentTxnFilter === 'all' ? txns : txns.filter(t => t.type === currentTxnFilter);
+  filtered.sort((a,b) => b.date > a.date ? 1 : a.date > b.date ? -1 : 0);
+  
+  document.getElementById('txnCount').textContent = filtered.length + ' Records';
+  
+  if(!filtered.length) {
+    document.getElementById('transactionsBody').innerHTML = '';
+    document.getElementById('txnEmpty').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('txnEmpty').classList.add('hidden');
+  
+  const typeBadge = (t) => {
+    const colors = {sale:'badge-green',purchase:'badge-blue',payment:'badge-red',receipt:'badge-green',journal:'badge-yellow',contra:'badge-gray',expense:'badge-red',gave_khata:'badge-red',got_khata:'badge-green'};
+    const labels = {sale:'Sale',purchase:'Purchase',payment:'Payment',receipt:'Receipt',journal:'Journal',contra:'Contra',expense:'Expense',gave_khata:'You Gave',got_khata:'You Got'};
+    return `<span class="badge ${colors[t]||'badge-gray'}">${labels[t]||t}</span>`;
+  };
+  
+  document.getElementById('transactionsBody').innerHTML = filtered.map(t => `
+    <tr class="entry-row group">
+      <td class="px-6 py-4 text-sm tabular-nums text-on-surface">${fmtDate(t.date)}</td>
+      <td class="px-6 py-4">${typeBadge(t.type)}</td>
+      <td class="px-6 py-4"><div class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded bg-surface-container-high flex items-center justify-center font-bold text-[9px] text-primary">${initials(t.partyName||t.vendor||t.category||'?')}</div>
+        <span class="text-sm font-semibold text-primary">${t.partyName||t.vendor||'-'}</span></div></td>
+      <td class="px-6 py-4"><span class="text-[10px] font-bold px-2 py-1 rounded bg-surface-container-low text-on-surface-variant uppercase tracking-tighter">${t.category||'-'}</span></td>
+      <td class="px-6 py-4 text-right font-bold tabular-nums text-primary text-sm">${fmt(t.amount)}</td>
+      <td class="px-6 py-4 text-xs text-outline max-w-[150px] truncate">${t.notes||''}</td>
+      <td class="px-6 py-4 text-right"><button class="opacity-0 group-hover:opacity-100 text-outline hover:text-red-600 transition-all" onclick="deleteTxn('${t.id}')"><span class="material-symbols-outlined text-sm">delete</span></button></td>
+    </tr>`).join('');
+}
+
+function filterTransactions(f, btn) {
+  currentTxnFilter = f;
+  document.querySelectorAll('.txn-filter').forEach(b => { b.className = 'txn-filter px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-surface-container-low text-on-surface-variant'; });
+  btn.className = 'txn-filter px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-primary text-white';
+  loadTransactions();
+}
+
+async function openTransactionModal(id) {
+  document.getElementById('txnId').value = '';
+  document.getElementById('txnType').value = 'sale';
+  document.getElementById('txnDate').value = today();
+  document.getElementById('txnVoucherNo').value = '';
+  document.getElementById('txnAmount').value = '';
+  document.getElementById('txnPaymentMode').value = 'cash';
+  document.getElementById('txnGstRate').value = '0';
+  document.getElementById('txnGstAmount').value = '';
+  document.getElementById('txnNotes').value = '';
+  document.getElementById('txnModalTitle').textContent = 'New Transaction';
+  
+  // Load parties into select
+  const parties = await dbGetAll('parties');
+  document.getElementById('txnParty').innerHTML = '<option value="">-- Select Party --</option>' + parties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  
+  // Load categories
+  const cats = await dbGetAll('categories');
+  const catList = cats.length ? cats.map(c=>c.name) : DEFAULT_CATEGORIES;
+  document.getElementById('txnCategory').innerHTML = catList.map(c => `<option value="${c}">${c}</option>`).join('');
+  
+  onTxnTypeChange();
+  openModal('transactionModal');
+}
+
+function onTxnTypeChange() {
+  const type = document.getElementById('txnType').value;
+  const showGst = ['sale','purchase'].includes(type);
+  document.getElementById('txnGstWrap').style.display = showGst ? 'grid' : 'none';
+}
+
+function calcTxnGst() {
+  const amt = Number(document.getElementById('txnAmount').value) || 0;
+  const rate = Number(document.getElementById('txnGstRate').value) || 0;
+  document.getElementById('txnGstAmount').value = (amt * rate / 100).toFixed(2);
+}
+
+async function saveTransaction() {
+  const amount = Number(document.getElementById('txnAmount').value);
+  if(!amount || amount <= 0) { showToast('Enter valid amount','error'); return; }
+  const date = document.getElementById('txnDate').value;
+  if(!date) { showToast('Select a date','error'); return; }
+  
+  const partyId = document.getElementById('txnParty').value;
+  let partyName = '';
+  if(partyId) { const p = await dbGet('parties', partyId); partyName = p ? p.name : ''; }
+  
+  const data = {
+    id: document.getElementById('txnId').value || uid(),
+    type: document.getElementById('txnType').value,
+    date, amount,
+    voucherNo: document.getElementById('txnVoucherNo').value.trim() || 'V-' + Date.now().toString().slice(-6),
+    partyId, partyName,
+    category: document.getElementById('txnCategory').value,
+    paymentMode: document.getElementById('txnPaymentMode').value,
+    gstRate: Number(document.getElementById('txnGstRate').value) || 0,
+    gstAmount: Number(document.getElementById('txnGstAmount').value) || 0,
+    notes: document.getElementById('txnNotes').value.trim(),
+    createdAt: new Date().toISOString()
+  };
+  await dbPut('transactions', data);
+  closeModal('transactionModal');
+  showToast('Transaction saved');
+  if(currentPage==='transactions') loadTransactions();
+  if(currentPage==='dashboard') refreshDashboard();
+}
+
+// =========================================
+// EXPENSES
+// =========================================
+async function loadExpenses() {
+  const expenses = await dbGetAll('expenses');
+  expenses.sort((a,b) => b.date > a.date ? 1 : -1);
+  
+  // Month total
+  const ms = getMonthStart();
+  const me = getMonthEnd();
+  const monthExp = expenses.filter(e => e.date >= ms && e.date <= me);
+  const monthTotal = monthExp.reduce((s,e) => s + Number(e.amount), 0);
+  document.getElementById('expMonthTotal').textContent = fmt(monthTotal);
+  document.getElementById('expCount').textContent = expenses.length + ' Records';
+  
+  // Top categories
+  const catTotals = {};
+  expenses.forEach(e => { catTotals[e.category] = (catTotals[e.category]||0) + Number(e.amount); });
+  const topCats = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxCat = topCats.length ? topCats[0][1] : 1;
+  document.getElementById('expTopCats').innerHTML = topCats.length ? topCats.map(([cat,amt]) => `
+    <div>
+      <div class="flex items-center justify-between mb-1">
+        <div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full" style="background:${CATEGORY_COLORS[cat]||'#64748b'}"></div><span class="text-xs font-medium">${cat}</span></div>
+        <span class="text-xs font-bold tabular-nums">${fmt(amt)}</span>
+      </div>
+      <div class="w-full bg-surface-container-high rounded-full h-1.5"><div class="h-1.5 rounded-full" style="width:${(amt/maxCat*100).toFixed(0)}%;background:${CATEGORY_COLORS[cat]||'#64748b'}"></div></div>
+    </div>`).join('') : '<p class="text-xs text-outline">No data yet.</p>';
+  
+  // Monthly trend (last 6 months)
+  const months = [];
+  for(let i=5;i>=0;i--) { const d = new Date(); d.setMonth(d.getMonth()-i); months.push({month:d.getMonth(),year:d.getFullYear(),label:d.toLocaleString('en',{month:'short'})}); }
+  const monthlyTotals = months.map(m => {
+    return expenses.filter(e => { const d = new Date(e.date); return d.getMonth()===m.month && d.getFullYear()===m.year; }).reduce((s,e) => s + Number(e.amount), 0);
+  });
+  const maxMonth = Math.max(...monthlyTotals, 1);
+  document.getElementById('expTrend').innerHTML = months.map((m,i) => {
+    const h = Math.max(5, (monthlyTotals[i]/maxMonth)*100);
+    return `<div class="flex-1 flex flex-col items-center gap-1">
+      <div class="text-[9px] font-bold tabular-nums text-outline">${monthlyTotals[i]>0?fmtShort(monthlyTotals[i]):''}</div>
+      <div class="w-full rounded-t" style="height:${h}%;background:linear-gradient(180deg,#00333c,#004b57)"></div>
+      <div class="text-[9px] font-bold text-outline">${m.label}</div>
+    </div>`;
+  }).join('');
+  
+  if(!expenses.length) {
+    document.getElementById('expensesBody').innerHTML = '';
+    document.getElementById('expEmpty').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('expEmpty').classList.add('hidden');
+  
+  document.getElementById('expensesBody').innerHTML = expenses.map(e => `
+    <tr class="entry-row group">
+      <td class="px-6 py-4 text-sm tabular-nums text-on-surface">${fmtDate(e.date)}</td>
+      <td class="px-6 py-4"><div class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded bg-surface-container-high flex items-center justify-center font-bold text-[9px] text-primary">${initials(e.vendor||e.category)}</div>
+        <span class="text-sm font-semibold text-primary">${e.vendor||'-'}</span></div></td>
+      <td class="px-6 py-4"><span class="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-tighter" style="background:${(CATEGORY_COLORS[e.category]||'#64748b')}15;color:${CATEGORY_COLORS[e.category]||'#64748b'}">${e.category}</span></td>
+      <td class="px-6 py-4 text-right font-bold tabular-nums text-primary text-sm">${fmt(e.amount)}</td>
+      <td class="px-6 py-4"><span class="text-xs text-outline capitalize">${e.paymentMode||'cash'}</span></td>
+      <td class="px-6 py-4 text-right"><button class="opacity-0 group-hover:opacity-100 text-outline hover:text-red-600 transition-all" onclick="deleteExpense('${e.id}')"><span class="material-symbols-outlined text-sm">delete</span></button></td>
+    </tr>`).join('');
+}
+
+async function openExpenseModal() {
+  document.getElementById('expId').value = '';
+  document.getElementById('expAmount').value = '';
+  document.getElementById('expDate').value = today();
+  document.getElementById('expVendor').value = '';
+  document.getElementById('expPayMode').value = 'cash';
+  document.getElementById('expNotes').value = '';
+  document.getElementById('expModalTitle').textContent = 'Add Expense';
+  
+  const cats = await dbGetAll('categories');
+  const catList = cats.length ? cats.map(c=>c.name) : DEFAULT_CATEGORIES;
+  document.getElementById('expCategory').innerHTML = catList.map(c => `<option value="${c}">${c}</option>`).join('');
+  
+  openModal('expenseModal');
+}
+
+async function saveExpense() {
+  const amount = Number(document.getElementById('expAmount').value);
+  if(!amount || amount <= 0) { showToast('Enter valid amount','error'); return; }
+  const date = document.getElementById('expDate').value;
+  if(!date) { showToast('Select a date','error'); return; }
+  
+  const data = {
+    id: document.getElementById('expId').value || uid(),
+    amount, date,
+    category: document.getElementById('expCategory').value,
+    vendor: document.getElementById('expVendor').value.trim(),
+    paymentMode: document.getElementById('expPayMode').value,
+    notes: document.getElementById('expNotes').value.trim(),
+    createdAt: new Date().toISOString()
+  };
+  await dbPut('expenses', data);
+  closeModal('expenseModal');
+  showToast('Expense saved');
+  loadExpenses();
+}
+
+async function deleteExpense(id) {
+  if(!confirm('Delete this expense?')) return;
+  await dbDelete('expenses', id);
+  showToast('Expense deleted');
+  loadExpenses();
+}
+
+// =========================================
+// INVOICES
+// =========================================
+async function loadInvoices() {
+  const invoices = await dbGetAll('invoices');
+  invoices.sort((a,b) => b.date > a.date ? 1 : -1);
+  
+  const total = invoices.reduce((s,i) => s + Number(i.total||0), 0);
+  const paid = invoices.filter(i=>i.status==='paid').reduce((s,i) => s + Number(i.total||0), 0);
+  const pending = invoices.filter(i=>['sent','draft','overdue'].includes(i.status)).reduce((s,i) => s + Number(i.total||0), 0);
+  
+  document.getElementById('invoiceStats').innerHTML = `
+    <div class="stat-card"><span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Total Invoiced</span>
+      <div class="font-headline text-xl font-extrabold tabular-nums text-primary mt-1">${fmt(total)}</div></div>
+    <div class="stat-card"><span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Paid</span>
+      <div class="font-headline text-xl font-extrabold tabular-nums text-green-700 mt-1">${fmt(paid)}</div></div>
+    <div class="stat-card"><span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Pending</span>
+      <div class="font-headline text-xl font-extrabold tabular-nums text-red-700 mt-1">${fmt(pending)}</div></div>`;
+  
+  if(!invoices.length) {
+    document.getElementById('invoicesList').innerHTML = '';
+    document.getElementById('invEmpty').classList.remove('hidden'); return;
+  }
+  document.getElementById('invEmpty').classList.add('hidden');
+  
+  const statusBadge = (s) => ({paid:'badge-green',sent:'badge-blue',draft:'badge-gray',overdue:'badge-red',cancelled:'badge-yellow'}[s]||'badge-gray');
+  
+  document.getElementById('invoicesList').innerHTML = invoices.map(inv => `
+    <div class="flex items-center justify-between px-6 py-4 entry-row">
+      <div class="flex items-center gap-4">
+        <div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center"><span class="material-symbols-outlined text-primary">description</span></div>
+        <div>
+          <div class="text-sm font-bold text-primary">${inv.invoiceNumber} — ${inv.partyName}</div>
+          <div class="text-[10px] text-outline">${fmtDate(inv.date)} ${inv.dueDate?'· Due: '+fmtDate(inv.dueDate):''}</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <span class="badge ${statusBadge(inv.status)}">${inv.status}</span>
+        <span class="text-sm font-bold tabular-nums text-primary">${fmt(inv.total)}</span>
+        <button class="text-outline hover:text-primary transition-colors" onclick="previewInvoice('${inv.id}')"><span class="material-symbols-outlined text-sm">visibility</span></button>
+        <button class="text-outline hover:text-red-600 transition-colors" onclick="deleteInvoice('${inv.id}')"><span class="material-symbols-outlined text-sm">delete</span></button>
+      </div>
+    </div>`).join('');
+}
+
+async function openInvoiceModal() {
+  document.getElementById('invId').value = '';
+  const invoices = await dbGetAll('invoices');
+  document.getElementById('invNumber').value = 'INV-' + String(invoices.length + 1).padStart(4,'0');
+  document.getElementById('invDate').value = today();
+  document.getElementById('invDueDate').value = '';
+  document.getElementById('invGstRate').value = '18';
+  document.getElementById('invDiscount').value = '0';
+  document.getElementById('invNotes').value = '';
+  document.getElementById('invStatus').value = 'draft';
+  document.getElementById('invModalTitle').textContent = 'Create Invoice';
+  
+  const parties = await dbGetAll('parties');
+  document.getElementById('invParty').innerHTML = '<option value="">-- Select Customer --</option>' + parties.filter(p=>p.type!=='supplier').map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  
+  document.getElementById('invLines').innerHTML = '';
+  invoiceLineCount = 0;
+  addInvLine();
+  calcInvTotal();
+  openModal('invoiceModal');
+}
+
+function addInvLine() {
+  invoiceLineCount++;
+  const div = document.createElement('div');
+  div.className = 'flex gap-2 items-center inv-line';
+  div.innerHTML = `
+    <input class="flex-1 bg-surface-container-low border-none rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-primary inv-item-name" placeholder="Item name"/>
+    <input type="number" class="w-16 bg-surface-container-low border-none rounded-lg px-2 py-2 text-xs focus:ring-1 focus:ring-primary inv-item-qty" placeholder="Qty" value="1" min="1" onchange="calcInvTotal()"/>
+    <input type="number" step="0.01" class="w-24 bg-surface-container-low border-none rounded-lg px-2 py-2 text-xs focus:ring-1 focus:ring-primary inv-item-rate" placeholder="Rate ₹" onchange="calcInvTotal()"/>
+    <button class="text-outline hover:text-red-600" onclick="this.parentElement.remove();calcInvTotal()"><span class="material-symbols-outlined text-sm">close</span></button>`;
+  document.getElementById('invLines').appendChild(div);
+}
+
+function calcInvTotal() {
+  let subtotal = 0;
+  document.querySelectorAll('.inv-line').forEach(line => {
+    const qty = Number(line.querySelector('.inv-item-qty').value) || 0;
+    const rate = Number(line.querySelector('.inv-item-rate').value) || 0;
+    subtotal += qty * rate;
+  });
+  const gstRate = Number(document.getElementById('invGstRate').value) || 0;
+  const discount = Number(document.getElementById('invDiscount').value) || 0;
+  const gstAmt = subtotal * gstRate / 100;
+  const total = subtotal + gstAmt - discount;
+  
+  document.getElementById('invSubtotal').textContent = fmt(subtotal);
+  document.getElementById('invGstAmt').textContent = fmt(gstAmt);
+  document.getElementById('invDiscAmt').textContent = fmt(discount);
+  document.getElementById('invTotal').textContent = fmt(total);
+}
+
+async function saveInvoice() {
+  const partyId = document.getElementById('invParty').value;
+  const invNumber = document.getElementById('invNumber').value.trim();
+  if(!partyId) { showToast('Select a customer','error'); return; }
+  if(!invNumber) { showToast('Invoice number required','error'); return; }
+  
+  const party = await dbGet('parties', partyId);
+  const lines = [];
+  document.querySelectorAll('.inv-line').forEach(line => {
+    const name = line.querySelector('.inv-item-name').value.trim();
+    const qty = Number(line.querySelector('.inv-item-qty').value) || 0;
+    const rate = Number(line.querySelector('.inv-item-rate').value) || 0;
+    if(name && qty && rate) lines.push({name, qty, rate, amount: qty*rate});
+  });
+  
+  if(!lines.length) { showToast('Add at least one item','error'); return; }
+  
+  const subtotal = lines.reduce((s,l) => s + l.amount, 0);
+  const gstRate = Number(document.getElementById('invGstRate').value) || 0;
+  const discount = Number(document.getElementById('invDiscount').value) || 0;
+  const gstAmount = subtotal * gstRate / 100;
+  const total = subtotal + gstAmount - discount;
+  
+  const data = {
+    id: document.getElementById('invId').value || uid(),
+    invoiceNumber: invNumber,
+    date: document.getElementById('invDate').value || today(),
+    dueDate: document.getElementById('invDueDate').value,
+    partyId, partyName: party.name,
+    lines, subtotal, gstRate, gstAmount, discount, total,
+    notes: document.getElementById('invNotes').value.trim(),
+    status: document.getElementById('invStatus').value,
+    createdAt: new Date().toISOString()
+  };
+  
+  await dbPut('invoices', data);
+  
+  // Also create a sale transaction
+  await dbPut('transactions', {
+    id: 'inv-' + data.id, type:'sale', date:data.date, amount:data.total,
+    voucherNo: data.invoiceNumber, partyId, partyName: party.name,
+    category:'Sales', gstRate:data.gstRate, gstAmount:data.gstAmount,
+    notes:'Invoice: ' + data.invoiceNumber, createdAt: new Date().toISOString()
+  });
+  
+  closeModal('invoiceModal');
+  showToast('Invoice created');
+  loadInvoices();
+}
+
+async function deleteInvoice(id) {
+  if(!confirm('Delete this invoice?')) return;
+  await dbDelete('invoices', id);
+  await dbDelete('transactions', 'inv-' + id).catch(()=>{});
+  showToast('Invoice deleted');
+  loadInvoices();
+}
+
+async function previewInvoice(id) {
+  const inv = await dbGet('invoices', id);
+  if(!inv) return;
+  const settings = await getSettings();
+  
+  document.getElementById('invoicePreviewContent').innerHTML = `
+    <div id="printArea" style="font-family:Inter,sans-serif;color:#181c20">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2rem;border-bottom:2px solid #00333c;padding-bottom:1rem">
+        <div>
+          <div style="font-size:1.5rem;font-weight:800;color:#00333c">${settings.companyName||'Your Business'}</div>
+          <div style="font-size:0.75rem;color:#70787b;margin-top:4px">${settings.address||''}</div>
+          ${settings.gstin?'<div style="font-size:0.7rem;color:#70787b">GSTIN: '+settings.gstin+'</div>':''}
+          ${settings.phone?'<div style="font-size:0.7rem;color:#70787b">Phone: '+settings.phone+'</div>':''}
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:1.2rem;font-weight:700;color:#00333c">TAX INVOICE</div>
+          <div style="font-size:0.8rem;margin-top:4px"><strong>${inv.invoiceNumber}</strong></div>
+          <div style="font-size:0.75rem;color:#70787b">Date: ${fmtDate(inv.date)}</div>
+          ${inv.dueDate?'<div style="font-size:0.75rem;color:#70787b">Due: '+fmtDate(inv.dueDate)+'</div>':''}
+        </div>
+      </div>
+      <div style="margin-bottom:1.5rem">
+        <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#70787b;margin-bottom:4px">Bill To</div>
+        <div style="font-size:0.9rem;font-weight:700">${inv.partyName}</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem">
+        <thead><tr style="background:#f1f4fa">
+          <th style="padding:8px 12px;text-align:left;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#70787b;border-bottom:1px solid #dfe3e8">#</th>
+          <th style="padding:8px 12px;text-align:left;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#70787b;border-bottom:1px solid #dfe3e8">Item</th>
+          <th style="padding:8px 12px;text-align:right;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#70787b;border-bottom:1px solid #dfe3e8">Qty</th>
+          <th style="padding:8px 12px;text-align:right;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#70787b;border-bottom:1px solid #dfe3e8">Rate</th>
+          <th style="padding:8px 12px;text-align:right;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#70787b;border-bottom:1px solid #dfe3e8">Amount</th>
+        </tr></thead>
+        <tbody>${inv.lines.map((l,i) => `<tr style="border-bottom:1px solid #f1f4fa"><td style="padding:8px 12px;font-size:0.8rem">${i+1}</td><td style="padding:8px 12px;font-size:0.8rem;font-weight:600">${l.name}</td><td style="padding:8px 12px;text-align:right;font-size:0.8rem">${l.qty}</td><td style="padding:8px 12px;text-align:right;font-size:0.8rem">${fmt(l.rate)}</td><td style="padding:8px 12px;text-align:right;font-size:0.8rem;font-weight:600">${fmt(l.amount)}</td></tr>`).join('')}</tbody>
+      </table>
+      <div style="display:flex;justify-content:flex-end">
+        <div style="width:250px">
+          <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:0.8rem"><span>Subtotal</span><span style="font-weight:600">${fmt(inv.subtotal)}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:0.8rem"><span>GST (${inv.gstRate}%)</span><span style="font-weight:600">${fmt(inv.gstAmount)}</span></div>
+          ${inv.discount?'<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:0.8rem"><span>Discount</span><span style="font-weight:600">−'+fmt(inv.discount)+'</span></div>':''}
+          <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:1rem;font-weight:800;border-top:2px solid #00333c;margin-top:4px;color:#00333c"><span>Total</span><span>${fmt(inv.total)}</span></div>
+        </div>
+      </div>
+      ${inv.notes?'<div style="margin-top:2rem;padding:1rem;background:#f7f9ff;border-radius:8px;font-size:0.75rem;color:#70787b"><strong>Notes:</strong> '+inv.notes+'</div>':''}
+      <div style="margin-top:2rem;text-align:center;font-size:0.7rem;color:#bfc8ca">Generated by LedgerPro — Device Accounting Software</div>
+    </div>`;
+  openModal('invoicePreviewModal');
+}
+
+function printInvoice() {
+  const content = document.getElementById('printArea').innerHTML;
+  const w = window.open('','','width=800,height=600');
+  w.document.write('<html><head><title>Invoice</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"><style>body{font-family:Inter,sans-serif;padding:2rem;color:#181c20}@media print{body{padding:0}}</style></head><body>'+content+'</body></html>');
+  w.document.close();
+  w.print();
+}
+
+// =========================================
+// INVENTORY
+// =========================================
+async function loadInventory() {
+  const items = await dbGetAll('items');
+  
+  const totalItems = items.length;
+  const totalValue = items.reduce((s,i) => s + (Number(i.quantity)||0) * (Number(i.costPrice)||0), 0);
+  const lowStock = items.filter(i => Number(i.quantity) <= Number(i.reorderLevel) && Number(i.reorderLevel) > 0).length;
+  
+  document.getElementById('invStats').innerHTML = `
+    <div class="stat-card"><span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Total Items</span>
+      <div class="font-headline text-xl font-extrabold tabular-nums text-primary mt-1">${totalItems}</div></div>
+    <div class="stat-card"><span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Stock Value</span>
+      <div class="font-headline text-xl font-extrabold tabular-nums text-primary mt-1">${fmt(totalValue)}</div></div>
+    <div class="stat-card"><span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Low Stock Alerts</span>
+      <div class="font-headline text-xl font-extrabold tabular-nums ${lowStock?'text-red-700':'text-green-700'} mt-1">${lowStock}</div></div>`;
+  
+  if(!items.length) {
+    document.getElementById('inventoryBody').innerHTML = '';
+    document.getElementById('invEmpty').classList.remove('hidden'); return;
+  }
+  document.getElementById('invEmpty').classList.add('hidden');
+  
+  document.getElementById('inventoryBody').innerHTML = items.sort((a,b)=>a.name.localeCompare(b.name)).map(i => {
+    const isLow = Number(i.quantity) <= Number(i.reorderLevel) && Number(i.reorderLevel) > 0;
+    return `<tr class="entry-row group">
+      <td class="px-6 py-4"><span class="text-sm font-semibold text-primary">${i.name}</span>${isLow?'<span class="badge badge-red ml-2">LOW</span>':''}</td>
+      <td class="px-6 py-4 text-xs text-outline">${i.hsnCode||'-'}</td>
+      <td class="px-6 py-4 text-right font-bold tabular-nums text-sm">${Number(i.quantity).toFixed(2)}</td>
+      <td class="px-6 py-4 text-right tabular-nums text-sm">${fmt(i.costPrice)}</td>
+      <td class="px-6 py-4 text-right font-bold tabular-nums text-primary text-sm">${fmt(Number(i.quantity)*Number(i.costPrice))}</td>
+      <td class="px-6 py-4 text-xs text-outline">${i.unit}</td>
+      <td class="px-6 py-4 text-right">
+        <button class="opacity-0 group-hover:opacity-100 text-outline hover:text-primary transition-all mr-1" onclick="openItemModal('${i.id}')"><span class="material-symbols-outlined text-sm">edit</span></button>
+        <button class="opacity-0 group-hover:opacity-100 text-outline hover:text-red-600 transition-all" onclick="deleteItem('${i.id}')"><span class="material-symbols-outlined text-sm">delete</span></button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function openItemModal(id) {
+  document.getElementById('itemId').value = '';
+  document.getElementById('itemName').value = '';
+  document.getElementById('itemHsn').value = '';
+  document.getElementById('itemUnit').value = 'Nos';
+  document.getElementById('itemQty').value = '0';
+  document.getElementById('itemCostPrice').value = '0';
+  document.getElementById('itemSalePrice').value = '0';
+  document.getElementById('itemGst').value = '18';
+  document.getElementById('itemReorder').value = '0';
+  document.getElementById('itemModalTitle').textContent = 'Add Stock Item';
+  
+  if(id) {
+    const item = await dbGet('items', id);
+    if(item) {
+      document.getElementById('itemId').value = item.id;
+      document.getElementById('itemName').value = item.name;
+      document.getElementById('itemHsn').value = item.hsnCode||'';
+      document.getElementById('itemUnit').value = item.unit||'Nos';
+      document.getElementById('itemQty').value = item.quantity||0;
+      document.getElementById('itemCostPrice').value = item.costPrice||0;
+      document.getElementById('itemSalePrice').value = item.salePrice||0;
+      document.getElementById('itemGst').value = item.gstRate||18;
+      document.getElementById('itemReorder').value = item.reorderLevel||0;
+      document.getElementById('itemModalTitle').textContent = 'Edit Stock Item';
+    }
+  }
+  openModal('itemModal');
+}
+
+async function saveItem() {
+  const name = document.getElementById('itemName').value.trim();
+  if(!name) { showToast('Item name required','error'); return; }
+  const data = {
+    id: document.getElementById('itemId').value || uid(),
+    name, hsnCode: document.getElementById('itemHsn').value.trim(),
+    unit: document.getElementById('itemUnit').value,
+    quantity: Number(document.getElementById('itemQty').value)||0,
+    costPrice: Number(document.getElementById('itemCostPrice').value)||0,
+    salePrice: Number(document.getElementById('itemSalePrice').value)||0,
+    gstRate: Number(document.getElementById('itemGst').value)||0,
+    reorderLevel: Number(document.getElementById('itemReorder').value)||0,
+    createdAt: new Date().toISOString()
+  };
+  await dbPut('items', data);
+  closeModal('itemModal');
+  showToast('Item saved');
+  loadInventory();
+}
+
+async function deleteItem(id) {
+  if(!confirm('Delete this item?')) return;
+  await dbDelete('items', id);
+  showToast('Item deleted');
+  loadInventory();
+}
+
+// =========================================
+// REPORTS
+// =========================================
+async function generateReport() {
+  const type = currentReportType;
+  const from = document.getElementById('rptFrom').value || '2000-01-01';
+  const to = document.getElementById('rptTo').value || '2099-12-31';
+  
+  const txns = (await dbGetAll('transactions')).filter(t => t.date >= from && t.date <= to);
+  const expenses = (await dbGetAll('expenses')).filter(e => e.date >= from && e.date <= to);
+  const parties = await dbGetAll('parties');
+  
+  const el = document.getElementById('reportContent');
+  
+  switch(type) {
+    case 'pnl': {
+      const sales = txns.filter(t=>t.type==='sale').reduce((s,t)=>s+Number(t.amount),0);
+      const purchases = txns.filter(t=>t.type==='purchase').reduce((s,t)=>s+Number(t.amount),0);
+      const grossProfit = sales - purchases;
+      const totalExp = expenses.reduce((s,e)=>s+Number(e.amount),0) + txns.filter(t=>t.type==='expense').reduce((s,t)=>s+Number(t.amount),0);
+      const otherIncome = txns.filter(t=>t.type==='receipt'&&!t.partyId).reduce((s,t)=>s+Number(t.amount),0);
+      const netProfit = grossProfit - totalExp + otherIncome;
+      
+      // Expense breakdown
+      const expCats = {};
+      expenses.forEach(e => { expCats[e.category] = (expCats[e.category]||0) + Number(e.amount); });
+      txns.filter(t=>t.type==='expense').forEach(t => { expCats[t.category||'Miscellaneous'] = (expCats[t.category||'Miscellaneous']||0) + Number(t.amount); });
+      
+      el.innerHTML = `
+        <h2 class="font-headline text-xl font-bold text-primary mb-6">Profit & Loss Statement</h2>
+        <div class="text-xs text-outline mb-4">Period: ${fmtDate(from)} to ${fmtDate(to)}</div>
+        <table class="w-full text-sm">
+          <tbody>
+            <tr class="border-b"><td class="py-3 font-bold text-green-700">Sales Revenue</td><td class="py-3 text-right font-bold tabular-nums text-green-700">${fmt(sales)}</td></tr>
+            <tr class="border-b"><td class="py-3 font-bold text-blue-700 pl-4">Less: Cost of Purchases</td><td class="py-3 text-right font-bold tabular-nums text-blue-700">(${fmt(purchases)})</td></tr>
+            <tr class="border-b-2 border-primary bg-surface-container-low"><td class="py-3 font-bold text-primary">Gross Profit</td><td class="py-3 text-right font-bold tabular-nums text-primary">${fmt(grossProfit)}</td></tr>
+            <tr><td class="py-2 pt-4 font-bold text-on-surface-variant">Expenses</td><td></td></tr>
+            ${Object.entries(expCats).sort((a,b)=>b[1]-a[1]).map(([cat,amt]) => `<tr class="border-b border-surface-container-high/30"><td class="py-2 pl-6 text-on-surface-variant">${cat}</td><td class="py-2 text-right tabular-nums">${fmt(amt)}</td></tr>`).join('')}
+            <tr class="border-b"><td class="py-3 font-bold text-red-700 pl-4">Total Expenses</td><td class="py-3 text-right font-bold tabular-nums text-red-700">(${fmt(totalExp)})</td></tr>
+            ${otherIncome?`<tr class="border-b"><td class="py-3 pl-4">Other Income</td><td class="py-3 text-right tabular-nums text-green-700">${fmt(otherIncome)}</td></tr>`:''}
+            <tr class="bg-primary/5"><td class="py-4 font-headline font-bold text-lg text-primary">Net Profit / (Loss)</td><td class="py-4 text-right font-headline font-extrabold text-lg tabular-nums ${netProfit>=0?'text-green-700':'text-red-700'}">${fmt(netProfit)}</td></tr>
+          </tbody>
+        </table>`;
+      break;
+    }
+    case 'balancesheet': {
+      const ledgers = await dbGetAll('ledgers');
+      const assetGroups = ['Cash-in-Hand','Bank Accounts','Sundry Debtors','Stock-in-Hand','Fixed Assets','Deposits','Investments','Loans & Advances (Asset)'];
+      const liabilityGroups = ['Sundry Creditors','Duties & Taxes','Provisions','Secured Loans','Unsecured Loans','Capital Account','Reserves & Surplus'];
+      
+      let assets = {}, liabilities = {};
+      assetGroups.forEach(g => assets[g] = 0);
+      liabilityGroups.forEach(g => liabilities[g] = 0);
+      
+      ledgers.forEach(l => {
+        const bal = Number(l.openingBalance||0);
+        if(assetGroups.includes(l.group)) assets[l.group] += (l.openingType==='Dr'?bal:-bal);
+        if(liabilityGroups.includes(l.group)) liabilities[l.group] += (l.openingType==='Cr'?bal:-bal);
+      });
+      
+      const totalAssets = Object.values(assets).reduce((s,v)=>s+v,0);
+      const totalLiabilities = Object.values(liabilities).reduce((s,v)=>s+v,0);
+      
+      el.innerHTML = `
+        <h2 class="font-headline text-xl font-bold text-primary mb-6">Balance Sheet</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div><h3 class="font-bold text-green-700 mb-3 uppercase text-xs tracking-wider">Assets</h3>
+            <table class="w-full text-sm">${Object.entries(assets).filter(([,v])=>v!==0).map(([g,v])=>`<tr class="border-b border-surface-container-high/30"><td class="py-2">${g}</td><td class="py-2 text-right font-bold tabular-nums">${fmt(v)}</td></tr>`).join('')}
+            <tr class="bg-green-50"><td class="py-3 font-bold">Total Assets</td><td class="py-3 text-right font-bold tabular-nums text-green-700">${fmt(totalAssets)}</td></tr></table></div>
+          <div><h3 class="font-bold text-red-700 mb-3 uppercase text-xs tracking-wider">Liabilities & Capital</h3>
+            <table class="w-full text-sm">${Object.entries(liabilities).filter(([,v])=>v!==0).map(([g,v])=>`<tr class="border-b border-surface-container-high/30"><td class="py-2">${g}</td><td class="py-2 text-right font-bold tabular-nums">${fmt(v)}</td></tr>`).join('')}
+            <tr class="bg-red-50"><td class="py-3 font-bold">Total Liabilities</td><td class="py-3 text-right font-bold tabular-nums text-red-700">${fmt(totalLiabilities)}</td></tr></table></div>
+        </div>
+        <div class="mt-4 text-xs text-outline">Note: Add ledger accounts with opening balances for a complete balance sheet.</div>`;
+      break;
+    }
+    case 'daybook': {
+      const all = [...txns.map(t=>({...t,src:'txn'})),...expenses.map(e=>({...e,src:'exp',type:'expense'}))].sort((a,b)=>a.date>b.date?1:-1);
+      el.innerHTML = `
+        <h2 class="font-headline text-xl font-bold text-primary mb-4">Day Book</h2>
+        <div class="text-xs text-outline mb-4">${all.length} entries | ${fmtDate(from)} to ${fmtDate(to)}</div>
+        <table class="w-full text-sm"><thead><tr class="bg-surface-container-high/50">
+          <th class="px-4 py-2 text-left text-[10px] font-bold uppercase text-on-surface-variant">Date</th>
+          <th class="px-4 py-2 text-left text-[10px] font-bold uppercase text-on-surface-variant">Type</th>
+          <th class="px-4 py-2 text-left text-[10px] font-bold uppercase text-on-surface-variant">Party/Vendor</th>
+          <th class="px-4 py-2 text-right text-[10px] font-bold uppercase text-on-surface-variant">Debit (₹)</th>
+          <th class="px-4 py-2 text-right text-[10px] font-bold uppercase text-on-surface-variant">Credit (₹)</th>
+        </tr></thead><tbody class="divide-y divide-surface-container-high/30">${all.map(t => {
+          const isDebit = ['purchase','payment','expense','gave_khata'].includes(t.type);
+          return `<tr class="entry-row"><td class="px-4 py-2 tabular-nums">${fmtDate(t.date)}</td><td class="px-4 py-2 capitalize">${t.type}</td><td class="px-4 py-2">${t.partyName||t.vendor||t.category||'-'}</td><td class="px-4 py-2 text-right tabular-nums ${isDebit?'font-bold text-red-700':''}">${isDebit?fmt(t.amount):''}</td><td class="px-4 py-2 text-right tabular-nums ${!isDebit?'font-bold text-green-700':''}">${!isDebit?fmt(t.amount):''}</td></tr>`;
+        }).join('')}</tbody></table>`;
+      break;
+    }
+    case 'cashbook': {
+      const cashTxns = [...txns.filter(t=>t.paymentMode==='cash'),...expenses.filter(e=>e.paymentMode==='cash').map(e=>({...e,type:'expense'}))].sort((a,b)=>a.date>b.date?1:-1);
+      let runBal = 0;
+      el.innerHTML = `
+        <h2 class="font-headline text-xl font-bold text-primary mb-4">Cash & Bank Book</h2>
+        <table class="w-full text-sm"><thead><tr class="bg-surface-container-high/50">
+          <th class="px-4 py-2 text-left text-[10px] font-bold uppercase text-on-surface-variant">Date</th>
+          <th class="px-4 py-2 text-left text-[10px] font-bold uppercase text-on-surface-variant">Particulars</th>
+          <th class="px-4 py-2 text-right text-[10px] font-bold uppercase text-on-surface-variant">Received</th>
+          <th class="px-4 py-2 text-right text-[10px] font-bold uppercase text-on-surface-variant">Paid</th>
+          <th class="px-4 py-2 text-right text-[10px] font-bold uppercase text-on-surface-variant">Balance</th>
+        </tr></thead><tbody class="divide-y divide-surface-container-high/30">${cashTxns.map(t => {
+          const isIn = ['sale','receipt','got_khata'].includes(t.type);
+          if(isIn) runBal += Number(t.amount); else runBal -= Number(t.amount);
+          return `<tr class="entry-row"><td class="px-4 py-2 tabular-nums">${fmtDate(t.date)}</td><td class="px-4 py-2">${t.partyName||t.vendor||t.category||t.type}</td><td class="px-4 py-2 text-right tabular-nums ${isIn?'text-green-700 font-bold':''}">${isIn?fmt(t.amount):''}</td><td class="px-4 py-2 text-right tabular-nums ${!isIn?'text-red-700 font-bold':''}">${!isIn?fmt(t.amount):''}</td><td class="px-4 py-2 text-right tabular-nums font-bold ${runBal>=0?'text-primary':'text-red-700'}">${fmt(runBal)}</td></tr>`;
+        }).join('')}</tbody></table>`;
+      break;
+    }
+    case 'gst': {
+      const salesGst = txns.filter(t=>t.type==='sale'&&t.gstAmount>0);
+      const purchaseGst = txns.filter(t=>t.type==='purchase'&&t.gstAmount>0);
+      const outputGst = salesGst.reduce((s,t)=>s+Number(t.gstAmount||0),0);
+      const inputGst = purchaseGst.reduce((s,t)=>s+Number(t.gstAmount||0),0);
+      const netGst = outputGst - inputGst;
+      
+      el.innerHTML = `
+        <h2 class="font-headline text-xl font-bold text-primary mb-6">GST Summary</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div class="stat-card"><span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Output GST (on Sales)</span>
+            <div class="font-headline text-xl font-extrabold tabular-nums text-red-700 mt-1">${fmt(outputGst)}</div></div>
+          <div class="stat-card"><span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Input GST (on Purchases)</span>
+            <div class="font-headline text-xl font-extrabold tabular-nums text-green-700 mt-1">${fmt(inputGst)}</div></div>
+          <div class="stat-card"><span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Net GST ${netGst>=0?'Payable':'Refundable'}</span>
+            <div class="font-headline text-xl font-extrabold tabular-nums ${netGst>=0?'text-red-700':'text-green-700'} mt-1">${fmt(Math.abs(netGst))}</div></div>
+        </div>
+        <h3 class="font-bold text-sm mb-2">Sales with GST</h3>
+        <table class="w-full text-sm mb-6"><thead><tr class="bg-surface-container-high/50"><th class="px-4 py-2 text-left text-[10px] font-bold uppercase text-on-surface-variant">Date</th><th class="px-4 py-2 text-left text-[10px] font-bold uppercase text-on-surface-variant">Party</th><th class="px-4 py-2 text-right text-[10px] font-bold uppercase text-on-surface-variant">Taxable</th><th class="px-4 py-2 text-right text-[10px] font-bold uppercase text-on-surface-variant">GST%</th><th class="px-4 py-2 text-right text-[10px] font-bold uppercase text-on-surface-variant">GST Amt</th></tr></thead>
+        <tbody class="divide-y divide-surface-container-high/30">${salesGst.map(t=>`<tr class="entry-row"><td class="px-4 py-2 tabular-nums">${fmtDate(t.date)}</td><td class="px-4 py-2">${t.partyName||'-'}</td><td class="px-4 py-2 text-right tabular-nums">${fmt(t.amount)}</td><td class="px-4 py-2 text-right">${t.gstRate}%</td><td class="px-4 py-2 text-right font-bold tabular-nums">${fmt(t.gstAmount)}</td></tr>`).join('')||'<tr><td colspan="5" class="px-4 py-4 text-center text-outline">No GST sales</td></tr>'}</tbody></table>`;
+      break;
+    }
+    case 'outstanding': {
+      const receivable = {}, payable = {};
+      parties.forEach(p => {
+        let r = 0, pa = 0;
+        if(p.openingType==='receivable') r += Number(p.openingBalance||0);
+        if(p.openingType==='payable') pa += Number(p.openingBalance||0);
+        txns.forEach(t => {
+          if(t.partyId !== p.id) return;
+          if(t.type==='sale'||t.type==='gave_khata') r += Number(t.amount);
+          if(t.type==='receipt'||t.type==='got_khata') r -= Number(t.amount);
+          if(t.type==='purchase') pa += Number(t.amount);
+          if(t.type==='payment') pa -= Number(t.amount);
+        });
+        if(r > 0) receivable[p.name] = r;
+        if(pa > 0) payable[p.name] = pa;
+      });
+      
+      el.innerHTML = `
+        <h2 class="font-headline text-xl font-bold text-primary mb-6">Outstanding Report</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div><h3 class="font-bold text-green-700 mb-3 uppercase text-xs tracking-wider">Receivables (To Collect)</h3>
+            <table class="w-full text-sm"><tbody class="divide-y divide-surface-container-high/30">
+            ${Object.entries(receivable).sort((a,b)=>b[1]-a[1]).map(([n,a])=>`<tr class="entry-row"><td class="py-2 font-semibold">${n}</td><td class="py-2 text-right font-bold tabular-nums text-green-700">${fmt(a)}</td></tr>`).join('')||'<tr><td class="py-4 text-outline">None</td></tr>'}
+            <tr class="bg-green-50"><td class="py-3 font-bold">Total</td><td class="py-3 text-right font-bold tabular-nums text-green-700">${fmt(Object.values(receivable).reduce((s,v)=>s+v,0))}</td></tr></tbody></table></div>
+          <div><h3 class="font-bold text-red-700 mb-3 uppercase text-xs tracking-wider">Payables (To Pay)</h3>
+            <table class="w-full text-sm"><tbody class="divide-y divide-surface-container-high/30">
+            ${Object.entries(payable).sort((a,b)=>b[1]-a[1]).map(([n,a])=>`<tr class="entry-row"><td class="py-2 font-semibold">${n}</td><td class="py-2 text-right font-bold tabular-nums text-red-700">${fmt(a)}</td></tr>`).join('')||'<tr><td class="py-4 text-outline">None</td></tr>'}
+            <tr class="bg-red-50"><td class="py-3 font-bold">Total</td><td class="py-3 text-right font-bold tabular-nums text-red-700">${fmt(Object.values(payable).reduce((s,v)=>s+v,0))}</td></tr></tbody></table></div>
+        </div>`;
+      break;
+    }
+  }
+}
+
+function showReport(type, btn) {
+  currentReportType = type;
+  document.querySelectorAll('.rpt-tab').forEach(b => { b.className = 'rpt-tab px-4 py-2 rounded-lg text-xs font-bold transition-all bg-surface-container-low text-on-surface-variant'; });
+  if(btn) btn.className = 'rpt-tab px-4 py-2 rounded-lg text-xs font-bold transition-all bg-primary text-white';
+  generateReport();
+}
+
+// =========================================
+// LEDGER ACCOUNTS
+// =========================================
+async function loadLedgers() {
+  const ledgers = await dbGetAll('ledgers');
+  if(!ledgers.length) {
+    document.getElementById('ledgerList').innerHTML = '<div class="empty-state"><span class="material-symbols-outlined text-5xl mb-3 text-outline-variant">menu_book</span><p class="font-semibold text-lg mb-1">No ledger accounts</p><p class="text-sm">Add accounts for your chart of accounts.</p></div>';
+    return;
+  }
+  
+  const groups = {};
+  ledgers.forEach(l => { if(!groups[l.group]) groups[l.group] = []; groups[l.group].push(l); });
+  
+  document.getElementById('ledgerList').innerHTML = Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0])).map(([group, accounts]) => `
+    <div class="border-b border-surface-container-high/30">
+      <div class="px-6 py-3 bg-surface-container-high/30 text-xs font-bold uppercase tracking-wider text-on-surface-variant">${group}</div>
+      ${accounts.map(a => `<div class="flex items-center justify-between px-6 py-3 entry-row">
+        <span class="text-sm font-semibold text-primary">${a.name}</span>
+        <div class="flex items-center gap-3">
+          <span class="text-sm tabular-nums font-bold">${fmt(a.openingBalance||0)} ${a.openingType||'Dr'}</span>
+          <button class="text-outline hover:text-red-600" onclick="deleteLedger('${a.id}')"><span class="material-symbols-outlined text-sm">delete</span></button>
+        </div>
+      </div>`).join('')}
+    </div>`).join('');
+}
+
+function openLedgerModal() {
+  document.getElementById('ledgerId').value = '';
+  document.getElementById('ledgerName').value = '';
+  document.getElementById('ledgerGroup').value = 'Cash-in-Hand';
+  document.getElementById('ledgerOpenBal').value = '0';
+  document.getElementById('ledgerOpenType').value = 'Dr';
+  openModal('ledgerModal');
+}
+
+async function saveLedger() {
+  const name = document.getElementById('ledgerName').value.trim();
+  if(!name) { showToast('Account name required','error'); return; }
+  const data = {
+    id: document.getElementById('ledgerId').value || uid(),
+    name, group: document.getElementById('ledgerGroup').value,
+    openingBalance: Number(document.getElementById('ledgerOpenBal').value)||0,
+    openingType: document.getElementById('ledgerOpenType').value,
+    createdAt: new Date().toISOString()
+  };
+  await dbPut('ledgers', data);
+  closeModal('ledgerModal');
+  showToast('Account saved');
+  loadLedgers();
+}
+
+async function deleteLedger(id) {
+  if(!confirm('Delete this account?')) return;
+  await dbDelete('ledgers', id);
+  showToast('Account deleted');
+  loadLedgers();
+}
+
+// =========================================
+// SETTINGS
+// =========================================
+async function getSettings() {
+  const all = await dbGetAll('settings');
+  return all.length ? all[0] : {};
+}
+
+async function loadSettings() {
+  const s = await getSettings();
+  appSettings = s;
+  document.getElementById('setCompanyName').value = s.companyName || '';
+  document.getElementById('setGstin').value = s.gstin || '';
+  document.getElementById('setPan').value = s.pan || '';
+  document.getElementById('setAddress').value = s.address || '';
+  document.getElementById('setPhone').value = s.phone || '';
+  document.getElementById('setFyStart').value = s.fyStart || '04';
+  document.getElementById('setGstEnabled').checked = s.gstEnabled !== false;
+  document.getElementById('setDefaultGst').value = s.defaultGst || '18';
+  document.getElementById('setState').value = s.state || '';
+  
+  // Load categories
+  const cats = await dbGetAll('categories');
+  if(!cats.length) {
+    for(const c of DEFAULT_CATEGORIES) { await dbAdd('categories', {id:uid(), name:c}); }
+  }
+  renderCategories();
+  
+  // Storage info
+  if(navigator.storage && navigator.storage.estimate) {
+    const est = await navigator.storage.estimate();
+    document.getElementById('storageDetails').innerHTML = `Used: ${(est.usage/1024/1024).toFixed(2)} MB / Available: ${(est.quota/1024/1024).toFixed(0)} MB`;
+  }
+}
+
+function renderCategories() {
+  dbGetAll('categories').then(cats => {
+    document.getElementById('categoriesList').innerHTML = cats.map(c => `
+      <div class="flex items-center justify-between px-3 py-2 bg-surface-container-low rounded-lg">
+        <span class="text-sm font-medium">${c.name}</span>
+        <button class="text-outline hover:text-red-600 transition-colors" onclick="removeCategory('${c.id}')"><span class="material-symbols-outlined text-sm">close</span></button>
+      </div>`).join('');
+  });
+}
+
+async function addCategory() {
+  const name = document.getElementById('newCategoryInput').value.trim();
+  if(!name) return;
+  await dbAdd('categories', {id:uid(), name});
+  document.getElementById('newCategoryInput').value = '';
+  renderCategories();
+  showToast('Category added');
+}
+
+async function removeCategory(id) {
+  await dbDelete('categories', id);
+  renderCategories();
+}
+
+async function saveSettings() {
+  const data = {
+    id: 'main-settings',
+    companyName: document.getElementById('setCompanyName').value.trim(),
+    gstin: document.getElementById('setGstin').value.trim(),
+    pan: document.getElementById('setPan').value.trim(),
+    address: document.getElementById('setAddress').value.trim(),
+    phone: document.getElementById('setPhone').value.trim(),
+    fyStart: document.getElementById('setFyStart').value,
+    gstEnabled: document.getElementById('setGstEnabled').checked,
+    defaultGst: document.getElementById('setDefaultGst').value,
+    state: document.getElementById('setState').value.trim(),
+    updatedAt: new Date().toISOString()
+  };
+  await dbPut('settings', data);
+  appSettings = data;
+  showToast('Settings saved');
+  // Update avatar
+  if(data.companyName) {
+    document.getElementById('userAvatar').textContent = initials(data.companyName);
+  }
+}
+
+// =========================================
+// DATA EXPORT / IMPORT
+// =========================================
+async function exportAllData() {
+  const data = {
+    version: '1.0',
+    exportedAt: new Date().toISOString(),
+    parties: await dbGetAll('parties'),
+    transactions: await dbGetAll('transactions'),
+    expenses: await dbGetAll('expenses'),
+    invoices: await dbGetAll('invoices'),
+    items: await dbGetAll('items'),
+    ledgers: await dbGetAll('ledgers'),
+    categories: await dbGetAll('categories'),
+    settings: await dbGetAll('settings')
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `LedgerPro-Backup-${today()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Backup downloaded successfully');
+}
+
+async function importAllData(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  if(!confirm('This will REPLACE all existing data. Are you sure?')) { event.target.value=''; return; }
+  
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    
+    // Clear existing data
+    const stores = ['parties','transactions','expenses','invoices','items','ledgers','categories','settings'];
+    for(const store of stores) {
+      const existing = await dbGetAll(store);
+      for(const item of existing) { await dbDelete(store, item.id); }
+    }
+    
+    // Import new data
+    for(const store of stores) {
+      if(data[store] && Array.isArray(data[store])) {
+        for(const item of data[store]) { await dbAdd(store, item); }
+      }
+    }
+    
+    showToast('Data imported successfully! Refreshing...');
+    setTimeout(() => { navigate(currentPage); }, 500);
+  } catch(e) {
+    showToast('Error importing data: ' + e.message, 'error');
+  }
+  event.target.value = '';
+}
+
+async function clearAllData() {
+  if(!confirm('⚠️ This will DELETE ALL your data permanently. This cannot be undone!\n\nAre you absolutely sure?')) return;
+  if(!confirm('Last chance! Type DELETE in the next prompt to confirm.')) return;
+  
+  const stores = ['parties','transactions','expenses','invoices','items','ledgers','categories','settings'];
+  for(const store of stores) {
+    const existing = await dbGetAll(store);
+    for(const item of existing) { await dbDelete(store, item.id); }
+  }
+  showToast('All data cleared', 'info');
+  navigate('dashboard');
+}
+
+async function exportTransactions() {
+  const txns = await dbGetAll('transactions');
+  let csv = 'Date,Type,Party,Category,Amount,GST,Payment Mode,Notes,Voucher No\n';
+  txns.sort((a,b)=>a.date>b.date?1:-1).forEach(t => {
+    csv += `"${t.date}","${t.type}","${t.partyName||''}","${t.category||''}",${t.amount},${t.gstAmount||0},"${t.paymentMode||''}","${(t.notes||'').replace(/"/g,'""')}","${t.voucherNo||''}"\n`;
+  });
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `Transactions-${today()}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  showToast('Transactions exported');
+}
+
+// =========================================
+// GLOBAL SEARCH
+// =========================================
+function handleGlobalSearch(q) {
+  // Simple: redirect to relevant page based on query
+  // In a full app, this would show a dropdown with results
+}
+
+// =========================================
+// INITIALIZATION
+// =========================================
+async function init() {
+  try {
+    await openDB();
+    
+    // Set default dates for reports
+    const now = new Date();
+    const fyStart = new Date(now.getFullYear(), 3, 1);
+    if(now.getMonth() < 3) fyStart.setFullYear(fyStart.getFullYear()-1);
+    document.getElementById('rptFrom').value = fyStart.toISOString().split('T')[0];
+    document.getElementById('rptTo').value = today();
+    
+    // Load settings
+    const settings = await getSettings();
+    if(settings.companyName) {
+      document.getElementById('userAvatar').textContent = initials(settings.companyName);
+    }
+    
+    // Initialize categories if empty
+    const cats = await dbGetAll('categories');
+    if(!cats.length) {
+      for(const c of DEFAULT_CATEGORIES) { await dbAdd('categories', {id:uid(), name:c}); }
+    }
+    
+    // Handle responsive sidebar
+    if(window.innerWidth >= 1024) {
+      document.getElementById('sidebar').classList.add('open');
+    }
+    window.addEventListener('resize', () => {
+      if(window.innerWidth >= 1024) document.getElementById('sidebar').classList.add('open');
+    });
+    
+    // Navigate to dashboard
+    refreshDashboard();
+    
+    console.log('✅ LedgerPro initialized — all data stored on your device (IndexedDB)');
+  } catch(e) {
+    console.error('Init error:', e);
+    showToast('Error initializing app: ' + e.message, 'error');
+  }
+}
+
+init();
+</script>
+</body>
+</html>
